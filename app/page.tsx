@@ -1,65 +1,77 @@
-import Image from "next/image";
+import { auth } from "@/auth"
+import { redirect } from "next/navigation"
+import GoogleSignInButton from "@/components/GoogleSignInButton"
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth()
+  
+  // Redirect to dashboard if already authenticated
+  if (session) {
+    redirect("/dashboard")
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="min-h-screen w-full gradient-mesh animate-gradient flex items-center justify-center p-4">
+      {/* Floating orbs for visual interest */}
+      <div className="absolute top-20 left-20 w-72 h-72 bg-primary-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float"></div>
+      <div className="absolute bottom-20 right-20 w-72 h-72 bg-accent-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float" style={{ animationDelay: '2s' }}></div>
+      
+      {/* Main content */}
+      <div className="relative z-10 w-full max-w-md">
+        {/* Logo/Title card */}
+        <div className="card-premium text-center mb-8 animate-float">
+          <div className="mb-6">
+            <div className="inline-block p-4 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 mb-4">
+              <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+          </div>
+          
+          <h1 className="text-4xl font-bold mb-3 bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
+            Rarity Runner
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-lg text-foreground/70 font-medium">
+            Track your running stats with style
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        
+        {/* Sign in card */}
+        <div className="card-premium text-center">
+          <h2 className="text-2xl font-semibold mb-2 text-foreground">
+            Welcome Back
+          </h2>
+          <p className="text-foreground/60 mb-8">
+            Sign in to access your running dashboard
+          </p>
+          
+          <div className="flex justify-center">
+            <GoogleSignInButton />
+          </div>
+          
+          <div className="mt-8 pt-6 border-t border-foreground/10">
+            <p className="text-sm text-foreground/50">
+              Secure authentication powered by Google
+            </p>
+          </div>
         </div>
-      </main>
+        
+        {/* Feature highlights */}
+        <div className="mt-8 grid grid-cols-3 gap-4">
+          <div className="glass rounded-xl p-4 text-center hover:scale-105 transition-transform duration-300">
+            <div className="text-2xl mb-2">📊</div>
+            <p className="text-xs font-medium text-foreground/70">Track Stats</p>
+          </div>
+          <div className="glass rounded-xl p-4 text-center hover:scale-105 transition-transform duration-300">
+            <div className="text-2xl mb-2">🏃‍♂️</div>
+            <p className="text-xs font-medium text-foreground/70">Log Runs</p>
+          </div>
+          <div className="glass rounded-xl p-4 text-center hover:scale-105 transition-transform duration-300">
+            <div className="text-2xl mb-2">📈</div>
+            <p className="text-xs font-medium text-foreground/70">See Progress</p>
+          </div>
+        </div>
+      </div>
     </div>
-  );
+  )
 }
