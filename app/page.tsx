@@ -21,10 +21,8 @@ export default async function Home() {
         {/* Logo/Title card */}
         <div className="card-premium text-center mb-8 animate-float">
           <div className="mb-6">
-            <div className="inline-block p-4 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 mb-4">
-              <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+            <div className="inline-block p-2 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 mb-4 w-32 h-32">
+              <img src="/rarity-logo.png" alt="Rarity Runner Logo" className="w-full h-full object-contain" />
             </div>
           </div>
           
