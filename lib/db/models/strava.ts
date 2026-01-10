@@ -234,3 +234,87 @@ export async function getRunningStats(user_id: string) {
     throw error;
   }
 }
+
+/**
+ * Get Strava connection by Strava user ID (for webhooks)
+ */
+export async function getStravaConnectionByStravaUserId(
+  strava_user_id: number
+): Promise<StravaConnection | null> {
+  const query = 'SELECT * FROM strava_connections WHERE strava_user_id = $1';
+
+  try {
+    const result = await pool.query<StravaConnection>(query, [strava_user_id]);
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Error getting Strava connection by Strava user ID:', error);
+    throw error;
+  }
+}
+
+/**
+ * Refresh Strava access token
+ */
+export async function refreshStravaToken(
+  connection: StravaConnection
+): Promise<StravaConnection> {
+  try {
+    const response = await fetch('https://www.strava.com/oauth/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: process.env.STRAVA_CLIENT_ID,
+        client_secret: process.env.STRAVA_CLIENT_SECRET,
+        grant_type: 'refresh_token',
+        refresh_token: connection.refresh_token,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to refresh Strava token');
+    }
+
+    const data = await response.json();
+
+    // Update connection with new tokens
+    const updatedConnection = await upsertStravaConnection({
+      user_id: connection.user_id,
+      strava_user_id: connection.strava_user_id,
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: new Date(data.expires_at * 1000),
+      athlete_data: connection.athlete_data,
+    });
+
+    return updatedConnection;
+  } catch (error) {
+    console.error('Error refreshing Strava token:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete running activity by Strava activity ID
+ */
+export async function deleteRunningActivity(
+  strava_activity_id: number
+): Promise<boolean> {
+  const query = 'DELETE FROM running_activities WHERE strava_activity_id = $1';
+
+  try {
+    const result = await pool.query(query, [strava_activity_id]);
+    return result.rowCount !== null && result.rowCount > 0;
+  } catch (error) {
+    console.error('Error deleting running activity:', error);
+    throw error;
+  }
+}
+
+/**
+ * Check if access token is expired
+ */
+export function isTokenExpired(connection: StravaConnection): boolean {
+  return new Date(connection.expires_at) <= new Date();
+}
