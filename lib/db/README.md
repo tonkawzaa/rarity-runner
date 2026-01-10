@@ -137,4 +137,81 @@ console.log(status); // { totalCount, idleCount, waitingCount }
 
 ---
 
+## 👤 User Database
+
+### ตาราง `users`
+
+| Column         | Type         | Description                          |
+| -------------- | ------------ | ------------------------------------ |
+| id             | VARCHAR(255) | Primary Key (Google User ID)         |
+| email          | VARCHAR(255) | Email (ต้องไม่ซ้ำ)                   |
+| name           | VARCHAR(255) | ชื่อผู้ใช้                           |
+| image          | TEXT         | URL รูปโปรไฟล์จาก Google             |
+| email_verified | BOOLEAN      | ยืนยัน email แล้วหรือไม่             |
+| created_at     | TIMESTAMP    | วันที่สร้างบัญชี                     |
+| updated_at     | TIMESTAMP    | วันที่อัพเดตล่าสุด (อัพเดตอัตโนมัติ) |
+| last_login     | TIMESTAMP    | วันที่ login ล่าสุด                  |
+
+### การติดตั้ง
+
+#### วิธีที่ 1: ใช้ Migration Script (แนะนำ)
+
+```bash
+npx tsx lib/db/migrate.ts
+```
+
+#### วิธีที่ 2: รัน SQL โดยตรง
+
+```bash
+psql -U tonkawzaa -d rarity_runner -f lib/db/schema/users.sql
+```
+
+### การใช้งาน User Model
+
+**ดึงข้อมูล User:**
+
+```typescript
+import { getUserById, getUserByEmail } from "@/lib/db/models/user";
+
+const user = await getUserById("google-user-id");
+const user = await getUserByEmail("user@example.com");
+```
+
+**สร้าง/อัพเดต User (UPSERT):**
+
+```typescript
+import { upsertUser } from "@/lib/db/models/user";
+
+const user = await upsertUser({
+  id: "google-user-id",
+  email: "user@example.com",
+  name: "John Doe",
+  image: "https://...",
+  email_verified: true,
+});
+```
+
+**อัพเดต Last Login:**
+
+```typescript
+import { updateLastLogin } from "@/lib/db/models/user";
+await updateLastLogin("google-user-id");
+```
+
+**ลบ User:**
+
+```typescript
+import { deleteUser } from "@/lib/db/models/user";
+const deleted = await deleteUser("google-user-id");
+```
+
+### ฟีเจอร์พิเศษ
+
+- **UPSERT**: ระบบใช้ `ON CONFLICT` เพื่ออัพเดตข้อมูลหาก user มีอยู่แล้ว
+- **Auto-Update**: `updated_at` จะถูกอัพเดตอัตโนมัติด้วย PostgreSQL trigger
+- **Index**: มี index บน `email` column เพื่อการค้นหาที่รวดเร็ว
+- **Auto-Save**: ระบบบันทึกข้อมูล user อัตโนมัติหลังจาก Google OAuth login
+
+---
+
 For more information, see the database module source code in `lib/db/`.

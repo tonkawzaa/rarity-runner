@@ -19,29 +19,29 @@ import { DbQueryResult, QueryParams, PoolStatus, DbError } from './types';
  * PostgreSQL connection pool
  * Singleton pattern ensures only one pool instance exists
  */
-let pool: Pool | null = null;
+let poolInstance: Pool | null = null;
 
 /**
  * Get or create the database connection pool
  */
 export function getPool(): Pool {
-  if (!pool) {
-    pool = new Pool(getDbConfig());
+  if (!poolInstance) {
+    poolInstance = new Pool(getDbConfig());
     
     // Handle pool errors
-    pool.on('error', (err: DbError) => {
+    poolInstance.on('error', (err: DbError) => {
       console.error('Unexpected database pool error:', err);
     });
     
     // Log pool connection in development
     if (isDevelopment) {
-      pool.on('connect', () => {
+      poolInstance.on('connect', () => {
         console.log('New database connection established');
       });
     }
   }
   
-  return pool;
+  return poolInstance;
 }
 
 /**
@@ -155,9 +155,9 @@ export function getPoolStatus(): PoolStatus {
  * Call this when shutting down the application
  */
 export async function closePool(): Promise<void> {
-  if (pool) {
-    await pool.end();
-    pool = null;
+  if (poolInstance) {
+    await poolInstance.end();
+    poolInstance = null;
     if (isDevelopment) {
       console.log('Database pool closed');
     }
@@ -185,3 +185,7 @@ export async function testConnection(): Promise<boolean> {
 
 // Export default query function
 export default { query, getClient, transaction, testConnection, closePool, getPoolStatus };
+
+// Export pool instance for direct access
+export const pool = getPool();
+
