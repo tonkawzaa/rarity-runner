@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { upsertStravaConnection } from '@/lib/db/models/strava';
-import { getUserById } from '@/lib/db/models/user';
+import { getUserById, getUserByEmail } from '@/lib/db/models/user';
 
 /**
  * Strava OAuth Callback Handler
@@ -26,16 +26,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const user_id = state;
+    // State should be in format "user_id:email"
+    const [user_id, user_email] = state.split(':');
 
-    // Verify user exists in database
-    const user = await getUserById(user_id);
+    // Verify user exists in database - try by ID first, then by email
+    console.log('Looking up user with ID:', user_id);
+    let user = await getUserById(user_id);
+    
+    if (!user && user_email) {
+      console.log('User not found by ID, trying email:', user_email);
+      user = await getUserByEmail(user_email);
+    }
+    
     if (!user) {
-      console.error('User not found:', user_id);
+      console.error('User not found with ID:', user_id, 'or email:', user_email);
       return NextResponse.redirect(
         `${process.env.NEXTAUTH_URL}/dashboard?strava_error=user_not_found`
       );
     }
+    console.log('User found:', user.email);
 
     // Exchange authorization code for access token
     const tokenResponse = await fetch('https://www.strava.com/oauth/token', {
@@ -57,9 +66,9 @@ export async function GET(request: NextRequest) {
 
     const tokenData = await tokenResponse.json();
 
-    // Save Strava connection to database
+    // Save Strava connection to database using the actual user ID from database
     await upsertStravaConnection({
-      user_id,
+      user_id: user.id,
       strava_user_id: tokenData.athlete.id,
       access_token: tokenData.access_token,
       refresh_token: tokenData.refresh_token,

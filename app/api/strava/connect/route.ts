@@ -32,7 +32,8 @@ export async function GET() {
     authUrl.searchParams.append('redirect_uri', redirectUri);
     authUrl.searchParams.append('response_type', 'code');
     authUrl.searchParams.append('scope', 'read,activity:read_all,activity:write');
-    authUrl.searchParams.append('state', session.user.id); // Pass user ID as state
+    // Pass both user ID and email as state for robust user lookup
+    authUrl.searchParams.append('state', `${session.user.id}:${session.user.email}`);
 
     return NextResponse.redirect(authUrl.toString());
   } catch (error) {
