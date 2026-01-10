@@ -1,9 +1,16 @@
 import { auth, signOut } from "@/auth"
 import { redirect } from "next/navigation"
 import Image from "next/image"
-import { getStravaConnectionByUserId, getRunningStats, getRunningActivities } from "@/lib/db/models/strava"
+import { 
+  getStravaConnectionByUserId, 
+  getRunningStats, 
+  getRunningActivities,
+  getLeaderboard 
+} from "@/lib/db/models/strava"
 import { getUserByEmail } from "@/lib/db/models/user"
 import { DisconnectButton } from "@/components/DisconnectButton"
+import { Leaderboard } from "@/components/Leaderboard"
+import { RecentActivities } from "@/components/RecentActivities"
 import { format } from "date-fns"
 
 export default async function Dashboard() {
@@ -38,13 +45,14 @@ export default async function Dashboard() {
     avg_speed: 0,
     total_runs: 0
   };
-  let activities: any[] = [];
+  let activitiesObj = { activities: [], total: 0 };
   let formattedPace = "--";
 
   if (stravaConnection && userId) {
     const [fetchedStats, fetchedActivities] = await Promise.all([
       getRunningStats(userId),
-      getRunningActivities(userId, 5) // Fetch latest 5 activities
+      // Fetch page 1, 10 items
+      getRunningActivities(userId, 1, 10) 
     ]);
     
     if (fetchedStats) {
@@ -56,7 +64,6 @@ export default async function Dashboard() {
       };
 
       // Calculate Pace (min/km) from Speed (m/s)
-      // Formula: (1000 / speed_in_mps) / 60
       if (stats.avg_speed > 0) {
         const paceDecimal = (1000 / stats.avg_speed) / 60;
         const paceMin = Math.floor(paceDecimal);
@@ -66,9 +73,16 @@ export default async function Dashboard() {
     }
 
     if (fetchedActivities) {
-      activities = fetchedActivities;
+      activitiesObj = fetchedActivities as any;
     }
   }
+
+  // Fetch Leaderboard Data (Parallel Fetching)
+  const [leaderboardWeek, leaderboardMonth, leaderboardYear] = await Promise.all([
+    getLeaderboard('week', 10),
+    getLeaderboard('month', 10),
+    getLeaderboard('year', 10),
+  ]);
 
   // Unit Conversions
   const totalDistanceKm = (stats.total_distance / 1000).toFixed(1);
@@ -234,59 +248,51 @@ export default async function Dashboard() {
           </div>
         </div>
 
-        {/* Recent Activity */}
-        <div className="card-premium">
-          <h3 className="text-xl font-bold mb-6 text-foreground">Recent Activity</h3>
-          
-          {activities.length > 0 ? (
-            <div className="space-y-4">
-              {activities.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between p-4 rounded-xl bg-foreground/5 hover:bg-foreground/10 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-lg bg-orange-500/10 text-orange-600">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-foreground">{activity.name}</h4>
-                      <p className="text-sm text-foreground/60">
-                        {format(new Date(activity.start_date), 'PPP p')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-foreground">{(Number(activity.distance) / 1000).toFixed(2)} km</p>
-                    <p className="text-sm text-foreground/60">
-                      {Math.floor(Number(activity.moving_time) / 60)}m {(Number(activity.moving_time) % 60)}s
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Recent Activity and Leaderboard Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Recent Activity */}
+          {activitiesObj.total > 0 ? (
+            <RecentActivities 
+              initialActivities={activitiesObj.activities} 
+              totalCount={activitiesObj.total}
+              userId={userId || ''}
+            />
           ) : (
-            <div className="text-center py-12">
-              <div className="inline-block p-6 rounded-2xl bg-gradient-to-br from-primary-500/10 to-accent-500/10 mb-4">
-                <svg className="w-16 h-16 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
+             <div className="card-premium h-fit">
+              <h3 className="text-xl font-bold mb-6 text-foreground">Recent Activity</h3>
+              
+              <div className="text-center py-12">
+                <div className="inline-block p-6 rounded-2xl bg-gradient-to-br from-primary-500/10 to-accent-500/10 mb-4">
+                  <svg className="w-16 h-16 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                </div>
+                <h4 className="text-lg font-semibold mb-2 text-foreground">No runs recorded yet</h4>
+                <p className="text-foreground/60 mb-6 max-w-md mx-auto">
+                  {stravaConnection 
+                    ? "Your Strava activities will appear here automatically!"
+                    : "Connect your Strava account to start tracking your runs!"}
+                </p>
+                {!stravaConnection && (
+                  <a
+                    href="/api/strava/connect"
+                    className="btn-primary inline-block"
+                  >
+                    Connect Strava Now
+                  </a>
+                )}
               </div>
-              <h4 className="text-lg font-semibold mb-2 text-foreground">No runs recorded yet</h4>
-              <p className="text-foreground/60 mb-6 max-w-md mx-auto">
-                {stravaConnection 
-                  ? "Your Strava activities will appear here automatically!"
-                  : "Connect your Strava account to start tracking your runs!"}
-              </p>
-              {!stravaConnection && (
-                <a
-                  href="/api/strava/connect"
-                  className="btn-primary inline-block"
-                >
-                  Connect Strava Now
-                </a>
-              )}
             </div>
           )}
+
+          {/* Leaderboard */}
+          <Leaderboard 
+            data={{
+              week: leaderboardWeek,
+              month: leaderboardMonth,
+              year: leaderboardYear
+            }}
+          />
         </div>
       </main>
     </div>

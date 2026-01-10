@@ -191,20 +191,39 @@ export async function saveRunningActivity(
 /**
  * Get running activities for a user
  */
+/**
+ * Get running activities for a user with pagination
+ */
 export async function getRunningActivities(
   user_id: string,
-  limit: number = 50
-): Promise<RunningActivity[]> {
-  const query = `
+  page: number = 1,
+  limit: number = 10
+): Promise<{ activities: RunningActivity[], total: number }> {
+  const offset = (page - 1) * limit;
+  
+  const countQuery = `
+    SELECT COUNT(*) as total
+    FROM running_activities
+    WHERE user_id = $1
+  `;
+
+  const dataQuery = `
     SELECT * FROM running_activities 
     WHERE user_id = $1 
     ORDER BY start_date DESC 
-    LIMIT $2
+    LIMIT $2 OFFSET $3
   `;
 
   try {
-    const result = await pool.query<RunningActivity>(query, [user_id, limit]);
-    return result.rows;
+    const [countResult, dataResult] = await Promise.all([
+      pool.query(countQuery, [user_id]),
+      pool.query<RunningActivity>(dataQuery, [user_id, limit, offset])
+    ]);
+    
+    return {
+      activities: dataResult.rows,
+      total: parseInt(countResult.rows[0].total, 10)
+    };
   } catch (error) {
     console.error('Error getting running activities:', error);
     throw error;
@@ -317,4 +336,70 @@ export async function deleteRunningActivity(
  */
 export function isTokenExpired(connection: StravaConnection): boolean {
   return new Date(connection.expires_at) <= new Date();
+}
+
+export type LeaderboardEntry = {
+  rank: number;
+  user_id: string;
+  name: string;
+  image: string | null;
+  total_distance: number;
+  total_runs: number;
+};
+
+/**
+ * Get leaderboard data
+ */
+export async function getLeaderboard(
+  period: 'week' | 'month' | 'year' = 'week',
+  limit: number = 10
+): Promise<LeaderboardEntry[]> {
+  // Determine date filter based on period
+  let dateFilter = '';
+  switch (period) {
+    case 'week':
+      // Start of current week (Monday)
+      dateFilter = "DATE_TRUNC('week', NOW())";
+      break;
+    case 'month':
+      // Start of current month
+      dateFilter = "DATE_TRUNC('month', NOW())";
+      break;
+    case 'year':
+      // Start of current year
+      dateFilter = "DATE_TRUNC('year', NOW())";
+      break;
+  }
+
+  const query = `
+    SELECT 
+      u.id as user_id,
+      u.name,
+      u.image,
+      COALESCE(SUM(ra.distance), 0) as total_distance,
+      COUNT(ra.id) as total_runs
+    FROM users u
+    JOIN running_activities ra ON u.id = ra.user_id
+    WHERE ra.start_date >= ${dateFilter}
+    GROUP BY u.id, u.name, u.image
+    ORDER BY total_distance DESC
+    LIMIT $1
+  `;
+
+  try {
+    const result = await pool.query(query, [limit]);
+    
+    // Add rank/index
+    return result.rows.map((row, index) => ({
+      rank: index + 1,
+      user_id: row.user_id,
+      name: row.name || 'Anonymous',
+      image: row.image,
+      total_distance: Number(row.total_distance),
+      total_runs: Number(row.total_runs)
+    }));
+  } catch (error) {
+    console.error(`Error getting ${period} leaderboard:`, error);
+    return [];
+  }
 }
