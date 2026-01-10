@@ -1,8 +1,10 @@
 import { auth, signOut } from "@/auth"
 import { redirect } from "next/navigation"
 import Image from "next/image"
-import { getStravaConnectionByUserId } from "@/lib/db/models/strava"
+import { getStravaConnectionByUserId, getRunningStats, getRunningActivities } from "@/lib/db/models/strava"
+import { getUserByEmail } from "@/lib/db/models/user"
 import { DisconnectButton } from "@/components/DisconnectButton"
+import { format } from "date-fns"
 
 export default async function Dashboard() {
   const session = await auth()
@@ -12,10 +14,65 @@ export default async function Dashboard() {
     redirect("/")
   }
 
-  // Check if Strava is connected
-  const stravaConnection = session.user?.id 
-    ? await getStravaConnectionByUserId(session.user.id)
-    : null;
+  // Check if Strava is connected - try by user ID first, then by email
+  let stravaConnection = null;
+  let userId = session.user?.id;
+
+  if (userId) {
+    stravaConnection = await getStravaConnectionByUserId(userId);
+  }
+  
+  // If not found by ID, try by email (handle NextAuth ID inconsistencies)
+  if (!stravaConnection && session.user?.email) {
+    const user = await getUserByEmail(session.user.email);
+    if (user) {
+      userId = user.id; // Update to the correct DB user ID
+      stravaConnection = await getStravaConnectionByUserId(user.id);
+    }
+  }
+
+  // Fetch stats and activities if connected
+  let stats = {
+    total_distance: 0,
+    total_time: 0,
+    avg_speed: 0,
+    total_runs: 0
+  };
+  let activities: any[] = [];
+  let formattedPace = "--";
+
+  if (stravaConnection && userId) {
+    const [fetchedStats, fetchedActivities] = await Promise.all([
+      getRunningStats(userId),
+      getRunningActivities(userId, 5) // Fetch latest 5 activities
+    ]);
+    
+    if (fetchedStats) {
+      stats = {
+        total_distance: Number(fetchedStats.total_distance) || 0,
+        total_time: Number(fetchedStats.total_time) || 0,
+        avg_speed: Number(fetchedStats.avg_speed) || 0,
+        total_runs: Number(fetchedStats.total_runs) || 0
+      };
+
+      // Calculate Pace (min/km) from Speed (m/s)
+      // Formula: (1000 / speed_in_mps) / 60
+      if (stats.avg_speed > 0) {
+        const paceDecimal = (1000 / stats.avg_speed) / 60;
+        const paceMin = Math.floor(paceDecimal);
+        const paceSec = Math.round((paceDecimal - paceMin) * 60);
+        formattedPace = `${paceMin}'${paceSec.toString().padStart(2, '0')}"`;
+      }
+    }
+
+    if (fetchedActivities) {
+      activities = fetchedActivities;
+    }
+  }
+
+  // Unit Conversions
+  const totalDistanceKm = (stats.total_distance / 1000).toFixed(1);
+  const totalTimeHrs = (stats.total_time / 3600).toFixed(1);
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-gray-900 dark:via-purple-900 dark:to-gray-900">
@@ -136,8 +193,12 @@ export default async function Dashboard() {
                 </svg>
               </div>
             </div>
-            <p className="text-4xl font-bold mb-1 bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">0 km</p>
-            <p className="text-sm text-foreground/50">No runs yet</p>
+            <p className="text-4xl font-bold mb-1 bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+              {totalDistanceKm} km
+            </p>
+            <p className="text-sm text-foreground/50">
+              {stats.total_runs} runs tracked
+            </p>
           </div>
 
           {/* Total Time */}
@@ -150,8 +211,10 @@ export default async function Dashboard() {
                 </svg>
               </div>
             </div>
-            <p className="text-4xl font-bold mb-1 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">0 hrs</p>
-            <p className="text-sm text-foreground/50">No runs yet</p>
+            <p className="text-4xl font-bold mb-1 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              {totalTimeHrs} hrs
+            </p>
+            <p className="text-sm text-foreground/50">Moving time</p>
           </div>
 
           {/* Average Pace */}
@@ -164,8 +227,10 @@ export default async function Dashboard() {
                 </svg>
               </div>
             </div>
-            <p className="text-4xl font-bold mb-1 bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">-- min/km</p>
-            <p className="text-sm text-foreground/50">No runs yet</p>
+            <p className="text-4xl font-bold mb-1 bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+              {formattedPace} <span className="text-lg text-foreground/60 font-medium">/km</span>
+            </p>
+            <p className="text-sm text-foreground/50">All activities</p>
           </div>
         </div>
 
@@ -173,27 +238,55 @@ export default async function Dashboard() {
         <div className="card-premium">
           <h3 className="text-xl font-bold mb-6 text-foreground">Recent Activity</h3>
           
-          <div className="text-center py-12">
-            <div className="inline-block p-6 rounded-2xl bg-gradient-to-br from-primary-500/10 to-accent-500/10 mb-4">
-              <svg className="w-16 h-16 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
+          {activities.length > 0 ? (
+            <div className="space-y-4">
+              {activities.map((activity) => (
+                <div key={activity.id} className="flex items-center justify-between p-4 rounded-xl bg-foreground/5 hover:bg-foreground/10 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-orange-500/10 text-orange-600">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-foreground">{activity.name}</h4>
+                      <p className="text-sm text-foreground/60">
+                        {format(new Date(activity.start_date), 'PPP p')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-foreground">{(Number(activity.distance) / 1000).toFixed(2)} km</p>
+                    <p className="text-sm text-foreground/60">
+                      {Math.floor(Number(activity.moving_time) / 60)}m {(Number(activity.moving_time) % 60)}s
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-            <h4 className="text-lg font-semibold mb-2 text-foreground">No runs recorded yet</h4>
-            <p className="text-foreground/60 mb-6 max-w-md mx-auto">
-              {stravaConnection 
-                ? "Your Strava activities will appear here automatically!"
-                : "Connect your Strava account to start tracking your runs!"}
-            </p>
-            {!stravaConnection && (
-              <a
-                href="/api/strava/connect"
-                className="btn-primary inline-block"
-              >
-                Connect Strava Now
-              </a>
-            )}
-          </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="inline-block p-6 rounded-2xl bg-gradient-to-br from-primary-500/10 to-accent-500/10 mb-4">
+                <svg className="w-16 h-16 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <h4 className="text-lg font-semibold mb-2 text-foreground">No runs recorded yet</h4>
+              <p className="text-foreground/60 mb-6 max-w-md mx-auto">
+                {stravaConnection 
+                  ? "Your Strava activities will appear here automatically!"
+                  : "Connect your Strava account to start tracking your runs!"}
+              </p>
+              {!stravaConnection && (
+                <a
+                  href="/api/strava/connect"
+                  className="btn-primary inline-block"
+                >
+                  Connect Strava Now
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </main>
     </div>
