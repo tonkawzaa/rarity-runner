@@ -1,6 +1,8 @@
 import { auth, signOut } from "@/auth"
 import { redirect } from "next/navigation"
 import Image from "next/image"
+import { getStravaConnectionByUserId } from "@/lib/db/models/strava"
+import { DisconnectButton } from "@/components/DisconnectButton"
 
 export default async function Dashboard() {
   const session = await auth()
@@ -9,6 +11,11 @@ export default async function Dashboard() {
   if (!session) {
     redirect("/")
   }
+
+  // Check if Strava is connected
+  const stravaConnection = session.user?.id 
+    ? await getStravaConnectionByUserId(session.user.id)
+    : null;
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-gray-900 dark:via-purple-900 dark:to-gray-900">
@@ -79,6 +86,44 @@ export default async function Dashboard() {
           </div>
         </div>
 
+        {/* Strava Connection Section */}
+        <div className="card-premium mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500 to-red-500">
+                <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-foreground mb-1">
+                  {stravaConnection ? 'Strava Connected' : 'Connect to Strava'}
+                </h3>
+                {stravaConnection ? (
+                  <p className="text-sm text-foreground/60">
+                    Connected as {stravaConnection.athlete_data?.firstname} {stravaConnection.athlete_data?.lastname}
+                  </p>
+                ) : (
+                  <p className="text-sm text-foreground/60">
+                    Sync your running activities automatically
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            {stravaConnection ? (
+              <DisconnectButton className="px-6 py-3 rounded-xl text-sm font-semibold bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-all duration-200 hover:scale-105" />
+            ) : (
+              <a
+                href="/api/strava/connect"
+                className="px-6 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg hover:shadow-orange-500/50 transition-all duration-200 hover:scale-105 inline-block"
+              >
+                Connect Strava
+              </a>
+            )}
+          </div>
+        </div>
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Total Distance */}
@@ -136,11 +181,18 @@ export default async function Dashboard() {
             </div>
             <h4 className="text-lg font-semibold mb-2 text-foreground">No runs recorded yet</h4>
             <p className="text-foreground/60 mb-6 max-w-md mx-auto">
-              Start tracking your runs to see your progress and statistics here. Your running journey begins now!
+              {stravaConnection 
+                ? "Your Strava activities will appear here automatically!"
+                : "Connect your Strava account to start tracking your runs!"}
             </p>
-            <button className="btn-primary">
-              Log Your First Run
-            </button>
+            {!stravaConnection && (
+              <a
+                href="/api/strava/connect"
+                className="btn-primary inline-block"
+              >
+                Connect Strava Now
+              </a>
+            )}
           </div>
         </div>
       </main>

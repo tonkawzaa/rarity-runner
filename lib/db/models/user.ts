@@ -37,23 +37,40 @@ export interface UserInput {
 export async function upsertUser(userData: UserInput): Promise<User> {
   const { id, email, name, image, email_verified } = userData;
 
-  const query = `
-    INSERT INTO users (id, email, name, image, email_verified, last_login)
-    VALUES ($1, $2, $3, $4, $5, NOW())
-    ON CONFLICT (id) 
-    DO UPDATE SET
-      email = EXCLUDED.email,
-      name = EXCLUDED.name,
-      image = EXCLUDED.image,
-      email_verified = EXCLUDED.email_verified,
-      last_login = NOW(),
-      updated_at = NOW()
-    RETURNING *;
-  `;
-
-  const values = [id, email, name || null, image || null, email_verified || false];
-
+  // First, check if a user with this email exists but different ID
+  const existingUserQuery = 'SELECT id FROM users WHERE email = $1 AND id != $2';
+  
   try {
+    const existingResult = await pool.query(existingUserQuery, [email, id]);
+    
+    if (existingResult.rows.length > 0) {
+      // Email exists with different ID - update that user's ID
+      const updateQuery = `
+        UPDATE users 
+        SET id = $1, name = $2, image = $3, email_verified = $4, last_login = NOW(), updated_at = NOW()
+        WHERE email = $5
+        RETURNING *;
+      `;
+      const result = await pool.query<User>(updateQuery, [id, name || null, image || null, email_verified || false, email]);
+      return result.rows[0];
+    }
+    
+    // Normal UPSERT on ID
+    const query = `
+      INSERT INTO users (id, email, name, image, email_verified, last_login)
+      VALUES ($1, $2, $3, $4, $5, NOW())
+      ON CONFLICT (id) 
+      DO UPDATE SET
+        email = EXCLUDED.email,
+        name = EXCLUDED.name,
+        image = EXCLUDED.image,
+        email_verified = EXCLUDED.email_verified,
+        last_login = NOW(),
+        updated_at = NOW()
+      RETURNING *;
+    `;
+
+    const values = [id, email, name || null, image || null, email_verified || false];
     const result = await pool.query<User>(query, values);
     return result.rows[0];
   } catch (error) {
@@ -61,6 +78,7 @@ export async function upsertUser(userData: UserInput): Promise<User> {
     throw error;
   }
 }
+
 
 /**
  * Get user by ID
