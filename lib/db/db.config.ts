@@ -53,9 +53,10 @@ export function getDbConfig(): PoolConfig {
     connectionTimeoutMillis: 2000, // Return error after 2 seconds if connection fails
     
     // SSL configuration (uncomment for production with SSL)
-    // ssl: process.env.NODE_ENV === 'production' ? {
-    //   rejectUnauthorized: true
-    // } : false,
+    // SSL configuration - Required for Neon
+    ssl: {
+      rejectUnauthorized: true,
+    },
   };
 }
 

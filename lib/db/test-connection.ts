@@ -9,10 +9,13 @@
 import { config } from 'dotenv';
 config({ path: '.env.local' });
 
-import { testConnection, query, getPoolStatus, closePool } from './db';
+// Imports will be dynamic to ensure env vars are loaded first
 
 async function runTest() {
   console.log('🔍 Testing PostgreSQL Database Connection...\n');
+  
+  // Dynamically import db module to ensure env vars are loaded
+  const { testConnection, query, getPoolStatus, closePool } = await import('./db');
   
   try {
     // Test 1: Basic connection test

@@ -21,6 +21,9 @@ async function setupDatabase() {
     user: process.env.POSTGRES_USER,
     password: process.env.POSTGRES_PASSWORD,
     database: 'postgres', // Connect to default postgres database
+    ssl: {
+      rejectUnauthorized: true,
+    },
   });
 
   try {
