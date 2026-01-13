@@ -7,11 +7,11 @@ import {
   getRunningActivities,
   getLeaderboard 
 } from "@/lib/db/models/strava"
-import { getUserByEmail } from "@/lib/db/models/user"
+import { getUserByEmail, getAllUsers } from "@/lib/db/models/user"
 import { DisconnectButton } from "@/components/DisconnectButton"
 import { Leaderboard } from "@/components/Leaderboard"
 import { RecentActivities } from "@/components/RecentActivities"
-import { format } from "date-fns"
+import { Members } from "@/components/Members"
 
 export default async function Dashboard() {
   const session = await auth()
@@ -77,11 +77,12 @@ export default async function Dashboard() {
     }
   }
 
-  // Fetch Leaderboard Data (Parallel Fetching)
-  const [leaderboardWeek, leaderboardMonth, leaderboardYear] = await Promise.all([
+  // Fetch Leaderboard Data and All Users (Parallel Fetching)
+  const [leaderboardWeek, leaderboardMonth, leaderboardYear, allUsers] = await Promise.all([
     getLeaderboard('week', 10),
     getLeaderboard('month', 10),
     getLeaderboard('year', 10),
+    getAllUsers(),
   ]);
 
   // Unit Conversions
@@ -95,10 +96,8 @@ export default async function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+              <div className="p-2 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 h-10 w-10 flex items-center justify-center overflow-hidden">
+                <img src="/rarity-pony-cartoon.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
                 Rarity Runner
@@ -248,8 +247,17 @@ export default async function Dashboard() {
           </div>
         </div>
 
-        {/* Recent Activity and Leaderboard Grid */}
+        {/* Leaderboard and Recent Activity Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Leaderboard */}
+          <Leaderboard 
+            data={{
+              week: leaderboardWeek,
+              month: leaderboardMonth,
+              year: leaderboardYear
+            }}
+          />
+
           {/* Recent Activity */}
           {activitiesObj.total > 0 ? (
             <RecentActivities 
@@ -284,15 +292,11 @@ export default async function Dashboard() {
               </div>
             </div>
           )}
+        </div>
 
-          {/* Leaderboard */}
-          <Leaderboard 
-            data={{
-              week: leaderboardWeek,
-              month: leaderboardMonth,
-              year: leaderboardYear
-            }}
-          />
+        {/* Members Section */}
+        <div className="mt-8">
+          <Members users={allUsers} />
         </div>
       </main>
     </div>

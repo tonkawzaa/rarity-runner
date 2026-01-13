@@ -22,7 +22,7 @@ export default async function Home() {
         <div className="card-premium text-center mb-8 animate-float">
           <div className="mb-6">
             <div className="inline-block p-2 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 mb-4 w-32 h-32">
-              <img src="/rarity-logo.png" alt="Rarity Runner Logo" className="w-full h-full object-contain" />
+              <img src="/rarity-pony-cartoon.png" alt="Rarity Runner Logo" className="w-full h-full object-contain" />
             </div>
           </div>
           

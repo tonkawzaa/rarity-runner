@@ -142,3 +142,26 @@ export async function deleteUser(id: string): Promise<boolean> {
     throw error;
   }
 }
+
+/**
+ * Get all registered users
+ * @param limit Optional limit for number of users to return
+ * @returns Array of users ordered by creation date (newest first)
+ */
+export async function getAllUsers(limit?: number): Promise<User[]> {
+  let query = 'SELECT * FROM users ORDER BY created_at DESC';
+  const values: any[] = [];
+  
+  if (limit) {
+    query += ' LIMIT $1';
+    values.push(limit);
+  }
+  
+  try {
+    const result = await pool.query<User>(query, values);
+    return result.rows;
+  } catch (error) {
+    console.error('Error getting all users:', error);
+    throw error;
+  }
+}
