@@ -16,6 +16,8 @@ import { Members } from "@/components/Members"
 export default async function Dashboard() {
   const session = await auth()
   
+
+  
   // Redirect to home if not authenticated
   if (!session) {
     redirect("/")
