@@ -54,7 +54,7 @@ export function Members({ users }: MembersProps) {
                   <p className="font-semibold text-sm text-foreground">
                     {user.name || 'Anonymous Runner'}
                   </p>
-                  <p className="text-xs text-foreground/50">{user.email}</p>
+
                 </div>
               </div>
 
