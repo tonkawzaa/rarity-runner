@@ -208,7 +208,10 @@ export async function getRunningActivities(
   `;
 
   const dataQuery = `
-    SELECT * FROM running_activities 
+    SELECT id, user_id, strava_activity_id, name, distance, moving_time, 
+           elapsed_time, total_elevation_gain, activity_type, start_date, 
+           start_date_local, average_speed, max_speed, calories
+    FROM running_activities 
     WHERE user_id = $1 
     ORDER BY start_date DESC 
     LIMIT $2 OFFSET $3
@@ -250,6 +253,51 @@ export async function getRunningStats(user_id: string) {
     return result.rows[0];
   } catch (error) {
     console.error('Error getting running stats:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get running activities using cursor-based pagination (more efficient for large datasets)
+ */
+export async function getRunningActivitiesCursor(
+  user_id: string,
+  cursor?: string, // ISO date string of last activity's start_date
+  limit: number = 10
+): Promise<{ activities: RunningActivity[], nextCursor: string | null }> {
+  const dataQuery = cursor 
+    ? `
+      SELECT id, user_id, strava_activity_id, name, distance, moving_time, 
+             elapsed_time, total_elevation_gain, activity_type, start_date, 
+             start_date_local, average_speed, max_speed, calories
+      FROM running_activities 
+      WHERE user_id = $1 AND start_date < $3
+      ORDER BY start_date DESC 
+      LIMIT $2
+    `
+    : `
+      SELECT id, user_id, strava_activity_id, name, distance, moving_time, 
+             elapsed_time, total_elevation_gain, activity_type, start_date, 
+             start_date_local, average_speed, max_speed, calories
+      FROM running_activities 
+      WHERE user_id = $1
+      ORDER BY start_date DESC 
+      LIMIT $2
+    `;
+
+  try {
+    const params = cursor ? [user_id, limit + 1, cursor] : [user_id, limit + 1];
+    const result = await pool.query<RunningActivity>(dataQuery, params);
+    
+    const hasMore = result.rows.length > limit;
+    const activities = hasMore ? result.rows.slice(0, limit) : result.rows;
+    const nextCursor = hasMore && activities.length > 0 
+      ? activities.at(-1)?.start_date?.toISOString() || null
+      : null;
+    
+    return { activities, nextCursor };
+  } catch (error) {
+    console.error('Error getting running activities with cursor:', error);
     throw error;
   }
 }

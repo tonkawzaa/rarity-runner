@@ -46,6 +46,7 @@ CREATE INDEX IF NOT EXISTS idx_strava_connections_user_id ON strava_connections(
 CREATE INDEX IF NOT EXISTS idx_running_activities_user_id ON running_activities(user_id);
 CREATE INDEX IF NOT EXISTS idx_running_activities_start_date ON running_activities(start_date DESC);
 CREATE INDEX IF NOT EXISTS idx_running_activities_strava_id ON running_activities(strava_activity_id);
+CREATE INDEX IF NOT EXISTS idx_running_activities_user_start_date ON running_activities(user_id, start_date DESC);
 
 -- Update trigger for strava_connections
 DROP TRIGGER IF EXISTS set_timestamp_strava_connections ON strava_connections;
