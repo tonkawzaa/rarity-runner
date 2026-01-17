@@ -13,75 +13,79 @@ import { Leaderboard } from "@/components/Leaderboard"
 import { RecentActivities } from "@/components/RecentActivities"
 import { Members } from "@/components/Members"
 
-export default async function Dashboard() {
-  const session = await auth()
+// Helper: Format pace from speed (m/s) to min/km string
+function formatPace(avgSpeed: number): string {
+  if (avgSpeed <= 0) return "--";
   
+  const paceDecimal = (1000 / avgSpeed) / 60;
+  const paceMin = Math.floor(paceDecimal);
+  const paceSec = Math.round((paceDecimal - paceMin) * 60);
+  return `${paceMin}'${paceSec.toString().padStart(2, '0')}"`;
+}
 
-  
-  // Redirect to home if not authenticated
-  if (!session) {
-    redirect("/")
-  }
-
-  // Check if Strava is connected - try by user ID first, then by email
-  let stravaConnection = null;
+// Helper: Resolve user ID and Strava connection
+async function resolveUserAndStravaConnection(session: { user?: { id?: string; email?: string | null } }) {
   let userId = session.user?.id;
+  let stravaConnection = userId ? await getStravaConnectionByUserId(userId) : null;
 
-  if (userId) {
-    stravaConnection = await getStravaConnectionByUserId(userId);
-  }
-  
   // If not found by ID, try by email (handle NextAuth ID inconsistencies)
   if (!stravaConnection && session.user?.email) {
     const user = await getUserByEmail(session.user.email);
     if (user) {
-      userId = user.id; // Update to the correct DB user ID
+      userId = user.id;
       stravaConnection = await getStravaConnectionByUserId(user.id);
     }
   }
 
-  // Fetch stats and activities if connected
-  let stats = {
+  return { userId, stravaConnection };
+}
+
+// Helper: Fetch user stats and activities
+async function fetchUserStats(userId: string) {
+  const [fetchedStats, fetchedActivities] = await Promise.all([
+    getRunningStats(userId),
+    getRunningActivities(userId, 1, 10)
+  ]);
+
+  const stats = fetchedStats ? {
+    total_distance: Number(fetchedStats.total_distance) || 0,
+    total_time: Number(fetchedStats.total_time) || 0,
+    avg_speed: Number(fetchedStats.avg_speed) || 0,
+    total_runs: Number(fetchedStats.total_runs) || 0
+  } : {
     total_distance: 0,
     total_time: 0,
     avg_speed: 0,
     total_runs: 0
   };
-  let activitiesObj = { activities: [], total: 0 };
-  let formattedPace = "--";
 
-  if (stravaConnection && userId) {
-    const [fetchedStats, fetchedActivities] = await Promise.all([
-      getRunningStats(userId),
-      // Fetch page 1, 10 items
-      getRunningActivities(userId, 1, 10) 
-    ]);
-    
-    if (fetchedStats) {
-      stats = {
-        total_distance: Number(fetchedStats.total_distance) || 0,
-        total_time: Number(fetchedStats.total_time) || 0,
-        avg_speed: Number(fetchedStats.avg_speed) || 0,
-        total_runs: Number(fetchedStats.total_runs) || 0
-      };
+  const activitiesObj = fetchedActivities || { activities: [], total: 0 };
+  const formattedPace = formatPace(stats.avg_speed);
 
-      // Calculate Pace (min/km) from Speed (m/s)
-      if (stats.avg_speed > 0) {
-        const paceDecimal = (1000 / stats.avg_speed) / 60;
-        const paceMin = Math.floor(paceDecimal);
-        const paceSec = Math.round((paceDecimal - paceMin) * 60);
-        formattedPace = `${paceMin}'${paceSec.toString().padStart(2, '0')}"`;
-      }
-    }
+  return { stats, activitiesObj, formattedPace };
+}
 
-    if (fetchedActivities) {
-      activitiesObj = fetchedActivities as any;
-    }
+export default async function Dashboard() {
+  const session = await auth()
+
+  if (!session) {
+    redirect("/")
   }
 
+  // Resolve user and Strava connection
+  const { userId, stravaConnection } = await resolveUserAndStravaConnection(session);
+
+  // Fetch stats and activities if connected
+  const { stats, activitiesObj, formattedPace } = stravaConnection && userId
+    ? await fetchUserStats(userId)
+    : { 
+        stats: { total_distance: 0, total_time: 0, avg_speed: 0, total_runs: 0 },
+        activitiesObj: { activities: [], total: 0 } as { activities: any[]; total: number },
+        formattedPace: "--"
+      };
+
   // Fetch Leaderboard Data and All Users (Parallel Fetching)
-  const [leaderboardWeek, leaderboardMonth, leaderboardYear, allUsers] = await Promise.all([
-    getLeaderboard('week', 10),
+  const [leaderboardMonth, leaderboardYear, allUsers] = await Promise.all([
     getLeaderboard('month', 10),
     getLeaderboard('year', 10),
     getAllUsers(),
@@ -92,13 +96,13 @@ export default async function Dashboard() {
   const totalTimeHrs = (stats.total_time / 3600).toFixed(1);
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-gray-900 dark:via-purple-900 dark:to-gray-900">
+    <div className="min-h-screen w-full bg-linear-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-gray-900 dark:via-purple-900 dark:to-gray-900">
       {/* Header */}
       <header className="border-b border-foreground/10 bg-white/50 dark:bg-black/50 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 h-10 w-10 flex items-center justify-center overflow-hidden">
+              <div className="p-2 rounded-xl bg-linear-to-br from-primary-500 to-accent-500 h-10 w-10 flex items-center justify-center overflow-hidden">
                 <img src="/rarity-pony-cartoon.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
@@ -162,7 +166,7 @@ export default async function Dashboard() {
         <div className="card-premium mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500 to-red-500">
+              <div className="p-3 rounded-xl bg-linear-to-br from-orange-500 to-red-500">
                 <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
                 </svg>
@@ -251,10 +255,8 @@ export default async function Dashboard() {
 
         {/* Leaderboard and Recent Activity Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Leaderboard */}
           <Leaderboard 
             data={{
-              week: leaderboardWeek,
               month: leaderboardMonth,
               year: leaderboardYear
             }}
@@ -272,7 +274,7 @@ export default async function Dashboard() {
               <h3 className="text-xl font-bold mb-6 text-foreground">Recent Activity</h3>
               
               <div className="text-center py-12">
-                <div className="inline-block p-6 rounded-2xl bg-gradient-to-br from-primary-500/10 to-accent-500/10 mb-4">
+                <div className="inline-block p-6 rounded-2xl bg-linear-to-br from-primary-500/10 to-accent-500/10 mb-4">
                   <svg className="w-16 h-16 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                   </svg>
