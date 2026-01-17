@@ -12,6 +12,8 @@ import { DisconnectButton } from "@/components/DisconnectButton"
 import { Leaderboard } from "@/components/Leaderboard"
 import { RecentActivities } from "@/components/RecentActivities"
 import { Members } from "@/components/Members"
+import { PodiumCard } from "@/components/PodiumCard"
+import { AnimatedSection, StaggerContainer, StaggerItem } from "@/components/AnimatedSection"
 
 // Helper: Format pace from speed (m/s) to min/km string
 function formatPace(avgSpeed: number): string {
@@ -96,9 +98,9 @@ export default async function Dashboard() {
   const totalTimeHrs = (stats.total_time / 3600).toFixed(1);
 
   return (
-    <div className="min-h-screen w-full bg-linear-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-gray-900 dark:via-purple-900 dark:to-gray-900">
+    <div className="min-h-screen w-full liquid-glass-bg">
       {/* Header */}
-      <header className="border-b border-foreground/10 bg-white/50 dark:bg-black/50 backdrop-blur-md">
+      <header className="glass-nav sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -146,7 +148,7 @@ export default async function Dashboard() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
-        <div className="card-premium mb-8">
+        <AnimatedSection className="card-premium mb-8">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-3xl font-bold mb-2 text-foreground">
@@ -160,10 +162,10 @@ export default async function Dashboard() {
               <div className="text-6xl animate-float">🏃‍♂️</div>
             </div>
           </div>
-        </div>
+        </AnimatedSection>
 
         {/* Strava Connection Section */}
-        <div className="card-premium mb-8">
+        <AnimatedSection className="card-premium mb-8" delay={0.1}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-xl bg-linear-to-br from-orange-500 to-red-500">
@@ -198,12 +200,12 @@ export default async function Dashboard() {
               </a>
             )}
           </div>
-        </div>
+        </AnimatedSection>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Total Distance */}
-          <div className="card-premium">
+          <StaggerItem className="card-premium">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-foreground/60 uppercase tracking-wide">Total Distance</h3>
               <div className="p-2 rounded-lg bg-blue-500/10">
@@ -218,10 +220,10 @@ export default async function Dashboard() {
             <p className="text-sm text-foreground/50">
               {stats.total_runs} runs tracked
             </p>
-          </div>
+          </StaggerItem>
 
           {/* Total Time */}
-          <div className="card-premium">
+          <StaggerItem className="card-premium">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-foreground/60 uppercase tracking-wide">Total Time</h3>
               <div className="p-2 rounded-lg bg-purple-500/10">
@@ -234,10 +236,10 @@ export default async function Dashboard() {
               {totalTimeHrs} hrs
             </p>
             <p className="text-sm text-foreground/50">Moving time</p>
-          </div>
+          </StaggerItem>
 
           {/* Average Pace */}
-          <div className="card-premium">
+          <StaggerItem className="card-premium">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-foreground/60 uppercase tracking-wide">Average Pace</h3>
               <div className="p-2 rounded-lg bg-green-500/10">
@@ -250,19 +252,36 @@ export default async function Dashboard() {
               {formattedPace} <span className="text-lg text-foreground/60 font-medium">/km</span>
             </p>
             <p className="text-sm text-foreground/50">All activities</p>
-          </div>
-        </div>
+          </StaggerItem>
+        </StaggerContainer>
+
+        {/* Podium Top 3 Runners */}
+        <AnimatedSection className="mb-8" delay={0.2}>
+          <PodiumCard 
+            users={
+              leaderboardMonth.slice(0, 3).map((item, index) => ({
+                position: (index + 1) as 1 | 2 | 3,
+                username: item.name?.split(' ')[0] || 'Runner',
+                image: item.image,
+                totalDistance: `${(item.total_distance / 1000).toFixed(1)} km`
+              }))
+            } 
+          />
+        </AnimatedSection>
 
         {/* Leaderboard and Recent Activity Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Leaderboard 
-            data={{
-              month: leaderboardMonth,
-              year: leaderboardYear
-            }}
-          />
+        <StaggerContainer className="grid grid-cols-1 lg:grid-cols-2 gap-8" staggerDelay={0.15}>
+          <StaggerItem>
+            <Leaderboard 
+              data={{
+                month: leaderboardMonth,
+                year: leaderboardYear
+              }}
+            />
+          </StaggerItem>
 
           {/* Recent Activity */}
+          <StaggerItem>
           {activitiesObj.total > 0 ? (
             <RecentActivities 
               initialActivities={activitiesObj.activities} 
@@ -296,12 +315,13 @@ export default async function Dashboard() {
               </div>
             </div>
           )}
-        </div>
+          </StaggerItem>
+        </StaggerContainer>
 
         {/* Members Section */}
-        <div className="mt-8">
+        <AnimatedSection className="mt-8" delay={0.3}>
           <Members users={allUsers} />
-        </div>
+        </AnimatedSection>
       </main>
     </div>
   )

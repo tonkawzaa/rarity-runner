@@ -11,7 +11,7 @@ export default async function Home() {
   }
 
   return (
-    <div className="min-h-screen w-full gradient-mesh animate-gradient flex items-center justify-center p-4">
+    <div className="min-h-screen w-full liquid-glass-bg flex items-center justify-center p-4">
       {/* Floating orbs for visual interest */}
       <div className="absolute top-20 left-20 w-72 h-72 bg-primary-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float"></div>
       <div className="absolute bottom-20 right-20 w-72 h-72 bg-accent-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float" style={{ animationDelay: '2s' }}></div>
