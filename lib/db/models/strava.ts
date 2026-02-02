@@ -436,7 +436,7 @@ export type LeaderboardEntry = {
  * Uses LRU cache with 5-minute TTL (more dynamic data)
  */
 export async function getLeaderboard(
-  period: 'week' | 'month' | 'year' = 'week',
+  period: 'week' | 'month' | 'year' | 'last_month' = 'week',
   limit: number = 10
 ): Promise<LeaderboardEntry[]> {
   // Check cache first
@@ -447,6 +447,7 @@ export async function getLeaderboard(
   }
   // Determine date filter based on period
   let dateFilter = '';
+  let dateEndFilter = '';
   switch (period) {
     case 'week':
       // Start of current week (Monday)
@@ -460,8 +461,15 @@ export async function getLeaderboard(
       // Start of current year
       dateFilter = "DATE_TRUNC('year', NOW())";
       break;
+    case 'last_month':
+      // Start of last month to end of last month
+      dateFilter = "DATE_TRUNC('month', NOW() - INTERVAL '1 month')";
+      dateEndFilter = "DATE_TRUNC('month', NOW())";
+      break;
   }
 
+  const dateEndClause = dateEndFilter ? ` AND ra.start_date < ${dateEndFilter}` : '';
+  
   const query = `
     SELECT 
       u.id as user_id,
@@ -471,7 +479,7 @@ export async function getLeaderboard(
       COUNT(ra.id) as total_runs
     FROM users u
     JOIN running_activities ra ON u.id = ra.user_id
-    WHERE ra.start_date >= ${dateFilter}
+    WHERE ra.start_date >= ${dateFilter}${dateEndClause}
     GROUP BY u.id, u.name, u.image
     ORDER BY total_distance DESC
     LIMIT $1

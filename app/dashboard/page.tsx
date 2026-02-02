@@ -87,8 +87,9 @@ export default async function Dashboard() {
       };
 
   // Fetch Leaderboard Data and All Users (Parallel Fetching)
-  const [leaderboardMonth, leaderboardYear, allUsers] = await Promise.all([
+  const [leaderboardMonth, leaderboardLastMonth, leaderboardYear, allUsers] = await Promise.all([
     getLeaderboard('month', 10),
+    getLeaderboard('last_month', 10),
     getLeaderboard('year', 10),
     getAllUsers(),
   ]);
@@ -258,14 +259,22 @@ export default async function Dashboard() {
         {/* Podium Top 3 Runners */}
         <AnimatedSection className="mb-8" delay={0.2}>
           <PodiumCard 
-            users={
+            thisMonth={
               leaderboardMonth.slice(0, 3).map((item, index) => ({
                 position: (index + 1) as 1 | 2 | 3,
                 username: item.name?.split(' ')[0] || 'Runner',
                 image: item.image,
                 totalDistance: `${(item.total_distance / 1000).toFixed(1)} km`
               }))
-            } 
+            }
+            lastMonth={
+              leaderboardLastMonth.slice(0, 3).map((item, index) => ({
+                position: (index + 1) as 1 | 2 | 3,
+                username: item.name?.split(' ')[0] || 'Runner',
+                image: item.image,
+                totalDistance: `${(item.total_distance / 1000).toFixed(1)} km`
+              }))
+            }
           />
         </AnimatedSection>
 
