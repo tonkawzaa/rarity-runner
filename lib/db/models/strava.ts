@@ -4,6 +4,13 @@
  */
 
 import { pool } from '../db';
+import { 
+  stravaConnectionCache, 
+  leaderboardCache, 
+  userStatsCache,
+  getCacheKey,
+  invalidateUserCache 
+} from '../cache';
 
 export interface StravaConnection {
   id: number;
@@ -93,15 +100,27 @@ export async function upsertStravaConnection(
 
 /**
  * Get Strava connection by user ID
+ * Uses LRU cache with 30-minute TTL for cross-request caching
  */
 export async function getStravaConnectionByUserId(
   user_id: string
 ): Promise<StravaConnection | null> {
+  // Check cache first
+  const cached = stravaConnectionCache.get(user_id);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   const query = 'SELECT * FROM strava_connections WHERE user_id = $1';
 
   try {
     const result = await pool.query<StravaConnection>(query, [user_id]);
-    return result.rows[0] || null;
+    const connection = result.rows[0] || null;
+    
+    // Cache the result
+    stravaConnectionCache.set(user_id, connection);
+    
+    return connection;
   } catch (error) {
     console.error('Error getting Strava connection:', error);
     throw error;
@@ -110,12 +129,17 @@ export async function getStravaConnectionByUserId(
 
 /**
  * Delete Strava connection (disconnect)
+ * Also invalidates the user cache
  */
 export async function deleteStravaConnection(user_id: string): Promise<boolean> {
   const query = 'DELETE FROM strava_connections WHERE user_id = $1';
 
   try {
     const result = await pool.query(query, [user_id]);
+    
+    // Invalidate cache on deletion
+    invalidateUserCache(user_id);
+    
     return result.rowCount !== null && result.rowCount > 0;
   } catch (error) {
     console.error('Error deleting Strava connection:', error);
@@ -225,7 +249,7 @@ export async function getRunningActivities(
     
     return {
       activities: dataResult.rows,
-      total: parseInt(countResult.rows[0].total, 10)
+      total: Number.parseInt(countResult.rows[0].total, 10)
     };
   } catch (error) {
     console.error('Error getting running activities:', error);
@@ -235,8 +259,15 @@ export async function getRunningActivities(
 
 /**
  * Get running statistics for a user
+ * Uses LRU cache with 30-minute TTL for cross-request caching
  */
 export async function getRunningStats(user_id: string) {
+  // Check cache first
+  const cached = userStatsCache.get(user_id);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   const query = `
     SELECT 
       COUNT(*) as total_runs,
@@ -250,7 +281,12 @@ export async function getRunningStats(user_id: string) {
 
   try {
     const result = await pool.query(query, [user_id]);
-    return result.rows[0];
+    const stats = result.rows[0];
+    
+    // Cache the result
+    userStatsCache.set(user_id, stats);
+    
+    return stats;
   } catch (error) {
     console.error('Error getting running stats:', error);
     throw error;
@@ -397,11 +433,18 @@ export type LeaderboardEntry = {
 
 /**
  * Get leaderboard data
+ * Uses LRU cache with 5-minute TTL (more dynamic data)
  */
 export async function getLeaderboard(
   period: 'week' | 'month' | 'year' = 'week',
   limit: number = 10
 ): Promise<LeaderboardEntry[]> {
+  // Check cache first
+  const cacheKey = getCacheKey('leaderboard', period, limit);
+  const cached = leaderboardCache.get(cacheKey);
+  if (cached !== undefined) {
+    return cached;
+  }
   // Determine date filter based on period
   let dateFilter = '';
   switch (period) {
@@ -438,7 +481,7 @@ export async function getLeaderboard(
     const result = await pool.query(query, [limit]);
     
     // Add rank/index
-    return result.rows.map((row, index) => ({
+    const leaderboard = result.rows.map((row, index) => ({
       rank: index + 1,
       user_id: row.user_id,
       name: row.name || 'Anonymous',
@@ -446,6 +489,12 @@ export async function getLeaderboard(
       total_distance: Number(row.total_distance),
       total_runs: Number(row.total_runs)
     }));
+    
+    // Cache the result
+    const cacheKey = getCacheKey('leaderboard', period, limit);
+    leaderboardCache.set(cacheKey, leaderboard);
+    
+    return leaderboard;
   } catch (error) {
     console.error(`Error getting ${period} leaderboard:`, error);
     return [];

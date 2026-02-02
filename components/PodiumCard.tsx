@@ -1,6 +1,6 @@
 "use client";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, memo } from "react";
 
 type PodiumPosition = 1 | 2 | 3;
 
@@ -15,64 +15,78 @@ interface PodiumCardProps {
   users: PodiumUser[];
 }
 
-// Helper functions to avoid nested ternaries
+// Hoisted configuration objects (rendering-hoist-jsx)
+const GRADIENT_COLORS: Record<PodiumPosition, string> = {
+  1: "from-yellow-400 to-amber-500",
+  2: "from-gray-300 to-gray-400",
+  3: "from-orange-400 to-orange-600"
+};
+
+const PODIUM_HEIGHTS: Record<PodiumPosition, string> = {
+  1: "h-32",
+  2: "h-24",
+  3: "h-20"
+};
+
+const PODIUM_LABELS: Record<PodiumPosition, string> = {
+  1: "1st",
+  2: "2nd",
+  3: "3rd"
+};
+
+const MEDAL_EMOJIS: Record<PodiumPosition, string> = {
+  1: "🥇",
+  2: "🥈",
+  3: "🥉"
+};
+
+const BORDER_COLORS: Record<PodiumPosition, string> = {
+  1: "border-yellow-400",
+  2: "border-gray-400",
+  3: "border-orange-400"
+};
+
+const HEIGHT_MAP: Record<string, string> = {
+  "h-32": "8rem",
+  "h-24": "6rem",
+  "h-20": "5rem"
+};
+
+// Helper functions using hoisted config
 function getGradientColors(position: PodiumPosition): string {
-  const colors: Record<PodiumPosition, string> = {
-    1: "from-yellow-400 to-amber-500",
-    2: "from-gray-300 to-gray-400",
-    3: "from-orange-400 to-orange-600"
-  };
-  return colors[position];
+  return GRADIENT_COLORS[position];
 }
 
-// Return height as number for animation
 function getPodiumHeightClass(position: PodiumPosition): string {
-  const heights: Record<PodiumPosition, string> = {
-    1: "h-32",
-    2: "h-24",
-    3: "h-20"
-  };
-  return heights[position];
+  return PODIUM_HEIGHTS[position];
 }
 
 function getPodiumLabel(position: PodiumPosition): string {
-  const labels: Record<PodiumPosition, string> = {
-    1: "1st",
-    2: "2nd",
-    3: "3rd"
-  };
-  return labels[position];
+  return PODIUM_LABELS[position];
 }
 
 function getMedalEmoji(position: PodiumPosition): string {
-  const emojis: Record<PodiumPosition, string> = {
-    1: "🥇",
-    2: "🥈",
-    3: "🥉"
-  };
-  return emojis[position];
+  return MEDAL_EMOJIS[position];
 }
 
 function getBorderColor(position: PodiumPosition): string {
-  const borders: Record<PodiumPosition, string> = {
-    1: "border-yellow-400",
-    2: "border-gray-400",
-    3: "border-orange-400"
-  };
-  return borders[position];
+  return BORDER_COLORS[position];
 }
 
-// Helper to get target height in rem
 function getTargetHeight(heightClass: string): string {
-  const heightMap: Record<string, string> = {
-    "h-32": "8rem",
-    "h-24": "6rem",
-    "h-20": "5rem"
-  };
-  return heightMap[heightClass] || "5rem";
+  return HEIGHT_MAP[heightClass] || "5rem";
 }
 
-const ImageWithFallback = ({ src, alt, className }: { src: string; alt: string; className?: string }) => {
+// Memoized image component (rerender-memo)
+const ImageWithFallback = memo(function ImageWithFallback({ 
+  src, 
+  alt, 
+  className 
+}: { 
+  src: string; 
+  alt: string; 
+  className?: string 
+}) {
   const [imgSrc, setImgSrc] = useState(src);
 
   return (
@@ -83,7 +97,7 @@ const ImageWithFallback = ({ src, alt, className }: { src: string; alt: string; 
       onError={() => setImgSrc("/rarity-pony-cartoon.png")}
     />
   );
-};
+});
 
 export function PodiumCard({ users }: Readonly<PodiumCardProps>) {
   // Sort users by position to ensure correct order: 2nd, 1st, 3rd
