@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
 import sharp from 'sharp';
 import { updateUserImage, getUserByEmail } from '@/lib/db/models/user';
 
@@ -71,20 +69,9 @@ export async function POST(request: NextRequest) {
       .webp({ quality: 85 })
       .toBuffer();
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const filename = `${user.id}-${timestamp}.webp`;
-    
-    // Ensure uploads directory exists
-    const uploadsDir = join(process.cwd(), 'public', 'uploads', 'avatars');
-    await mkdir(uploadsDir, { recursive: true });
-
-    // Save file
-    const filepath = join(uploadsDir, filename);
-    await writeFile(filepath, processedImage);
-
-    // Generate public URL
-    const imageUrl = `/uploads/avatars/${filename}`;
+    // Convert to Base64 data URL for database storage
+    const base64 = processedImage.toString('base64');
+    const imageUrl = `data:image/webp;base64,${base64}`;
 
     // Update database
     const updatedUser = await updateUserImage(user.id, imageUrl);

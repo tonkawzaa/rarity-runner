@@ -114,6 +114,7 @@ export function ProfileImageUpload({ currentImage, userName }: ProfileImageUploa
               height={128}
               className="w-full h-full object-cover"
               onError={handleImageError}
+              unoptimized
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
