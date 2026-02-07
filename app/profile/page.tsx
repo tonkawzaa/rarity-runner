@@ -98,7 +98,7 @@ export default async function ProfilePage() {
                 userName={session.user?.name || "User"}
               />
               {/* Status Badge */}
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-linear-to-r from-green-500 to-emerald-500 text-white text-xs font-semibold shadow-lg">
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-semibold shadow-lg">
                 Active Runner
               </div>
             </div>
@@ -214,7 +214,7 @@ export default async function ProfilePage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <div className="inline-block p-6 rounded-2xl bg-linear-to-br from-primary-500/10 to-accent-500/10 mb-4">
+              <div className="inline-block p-6 rounded-2xl bg-gradient-to-br from-primary-500/10 to-accent-500/10 mb-4">
                 <svg className="w-12 h-12 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>

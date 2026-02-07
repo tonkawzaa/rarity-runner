@@ -106,7 +106,7 @@ export default async function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-linear-to-br from-primary-500 to-accent-500 h-10 w-10 flex items-center justify-center overflow-hidden">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 h-10 w-10 flex items-center justify-center overflow-hidden">
                 <img src="/rarity-pony-cartoon.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
@@ -172,7 +172,7 @@ export default async function Dashboard() {
         <AnimatedSection className="card-premium mb-8" delay={0.1}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-linear-to-br from-orange-500 to-red-500">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500 to-red-500">
                 <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
                 </svg>
@@ -305,7 +305,7 @@ export default async function Dashboard() {
               <h3 className="text-xl font-bold mb-6 text-foreground">Recent Activity</h3>
               
               <div className="text-center py-12">
-                <div className="inline-block p-6 rounded-2xl bg-linear-to-br from-primary-500/10 to-accent-500/10 mb-4">
+                <div className="inline-block p-6 rounded-2xl bg-gradient-to-br from-primary-500/10 to-accent-500/10 mb-4">
                   <svg className="w-16 h-16 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                   </svg>

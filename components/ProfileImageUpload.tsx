@@ -116,7 +116,7 @@ export function ProfileImageUpload({ currentImage, userName }: ProfileImageUploa
               onError={handleImageError}
             />
           ) : (
-            <div className="w-full h-full bg-linear-to-br from-primary-500 to-accent-500 flex items-center justify-center">
+            <div className="w-full h-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
               <span className="text-4xl text-white font-bold">
                 {userName?.charAt(0) || 'U'}
               </span>
@@ -142,7 +142,7 @@ export function ProfileImageUpload({ currentImage, userName }: ProfileImageUploa
         {/* Camera Badge */}
         <button
           onClick={triggerFileSelect}
-          className="absolute -bottom-1 -right-1 p-2 rounded-full bg-linear-to-r from-primary-500 to-accent-500 text-white shadow-lg hover:scale-110 transition-transform"
+          className="absolute -bottom-1 -right-1 p-2 rounded-full bg-gradient-to-r from-primary-500 to-accent-500 text-white shadow-lg hover:scale-110 transition-transform"
           aria-label="เปลี่ยนรูปโปรไฟล์"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -203,7 +203,7 @@ export function ProfileImageUpload({ currentImage, userName }: ProfileImageUploa
               <button
                 onClick={handleUpload}
                 disabled={isUploading}
-                className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold bg-linear-to-r from-primary-500 to-accent-500 text-white hover:shadow-lg hover:shadow-primary-500/30 transition-all disabled:opacity-50"
+                className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-primary-500 to-accent-500 text-white hover:shadow-lg hover:shadow-primary-500/30 transition-all disabled:opacity-50"
               >
                 {isUploading ? (
                   <span className="flex items-center justify-center gap-2">

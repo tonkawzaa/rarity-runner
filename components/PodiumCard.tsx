@@ -115,7 +115,7 @@ export function PodiumCard({ thisMonth, lastMonth }: Readonly<PodiumCardProps>) 
 
   return (
     <div className="card-premium">
-      <h3 className="text-xl font-bold mb-4 text-center bg-linear-to-r from-yellow-500 via-amber-500 to-orange-500 bg-clip-text text-transparent">
+      <h3 className="text-xl font-bold mb-4 text-center bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500 bg-clip-text text-transparent">
         🏆 Top Runners 🏆
       </h3>
       
@@ -125,7 +125,7 @@ export function PodiumCard({ thisMonth, lastMonth }: Readonly<PodiumCardProps>) 
           onClick={() => setActiveTab('thisMonth')}
           className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
             activeTab === 'thisMonth'
-              ? 'bg-linear-to-r from-yellow-500 to-amber-500 text-white shadow-lg shadow-yellow-500/30'
+              ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg shadow-yellow-500/30'
               : 'bg-foreground/5 text-foreground/60 hover:bg-foreground/10'
           }`}
         >
@@ -135,7 +135,7 @@ export function PodiumCard({ thisMonth, lastMonth }: Readonly<PodiumCardProps>) 
           onClick={() => setActiveTab('lastMonth')}
           className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
             activeTab === 'lastMonth'
-              ? 'bg-linear-to-r from-yellow-500 to-amber-500 text-white shadow-lg shadow-yellow-500/30'
+              ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg shadow-yellow-500/30'
               : 'bg-foreground/5 text-foreground/60 hover:bg-foreground/10'
           }`}
         >
@@ -178,7 +178,7 @@ export function PodiumCard({ thisMonth, lastMonth }: Readonly<PodiumCardProps>) 
                   <motion.div 
                     className={`
                       ${heightClass} w-20 sm:w-24 
-                      bg-linear-to-t ${bgColor} 
+                      bg-gradient-to-t ${bgColor} 
                       rounded-t-xl 
                       flex flex-col items-center justify-center
                       shadow-lg
