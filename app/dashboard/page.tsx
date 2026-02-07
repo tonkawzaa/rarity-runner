@@ -1,5 +1,6 @@
 import { auth, signOut } from "@/auth"
 import { redirect } from "next/navigation"
+import Link from "next/link"
 import Image from "next/image"
 import { 
   getStravaConnectionByUserId, 
@@ -116,13 +117,15 @@ export default async function Dashboard() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
                 {session.user?.image && (
-                  <Image
-                    src={session.user.image}
-                    alt={session.user.name || "User"}
-                    width={40}
-                    height={40}
-                    className="rounded-full border-2 border-primary-400"
-                  />
+                  <Link href="/profile" className="block hover:scale-105 transition-transform cursor-pointer">
+                    <Image
+                      src={session.user.image}
+                      alt={session.user.name || "User"}
+                      width={40}
+                      height={40}
+                      className="rounded-full border-2 border-primary-400 hover:border-primary-500 transition-colors"
+                    />
+                  </Link>
                 )}
                 <div className="hidden sm:block text-right">
                   <p className="text-sm font-semibold text-foreground">{session.user?.name}</p>

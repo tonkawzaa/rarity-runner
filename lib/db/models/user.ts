@@ -165,3 +165,26 @@ export async function getAllUsers(limit?: number): Promise<User[]> {
     throw error;
   }
 }
+
+/**
+ * Update user's profile image URL
+ * @param userId User ID to update
+ * @param imageUrl New image URL
+ * @returns Updated user or null if not found
+ */
+export async function updateUserImage(userId: string, imageUrl: string): Promise<User | null> {
+  const query = `
+    UPDATE users 
+    SET image = $1, updated_at = NOW()
+    WHERE id = $2
+    RETURNING *;
+  `;
+  
+  try {
+    const result = await pool.query<User>(query, [imageUrl, userId]);
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Error updating user image:', error);
+    throw error;
+  }
+}
