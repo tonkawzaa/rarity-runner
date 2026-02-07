@@ -14,6 +14,7 @@ export function ProfileImageUpload({ currentImage, userName }: ProfileImageUploa
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -67,9 +68,10 @@ export function ProfileImageUpload({ currentImage, userName }: ProfileImageUploa
         throw new Error(data.error || 'Upload failed');
       }
 
-      // Success - close modal and refresh
+      // Success - close modal, reset image error state, and refresh
       setShowModal(false);
       setPreviewUrl(null);
+      setImageLoadError(false);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการอัปโหลด');
@@ -91,20 +93,27 @@ export function ProfileImageUpload({ currentImage, userName }: ProfileImageUploa
     fileInputRef.current?.click();
   }, []);
 
-  const displayImage = currentImage || null;
+  // Handle image load error (e.g., file was deleted)
+  const handleImageError = useCallback(() => {
+    setImageLoadError(true);
+  }, []);
+
+  // Show image only if we have a URL and it hasn't failed to load
+  const shouldShowImage = currentImage && !imageLoadError;
 
   return (
     <>
       {/* Profile Image with Edit Button */}
       <div className="relative group">
         <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-primary-400 shadow-lg shadow-primary-500/20">
-          {displayImage ? (
+          {shouldShowImage ? (
             <Image
-              src={displayImage}
+              src={currentImage}
               alt={userName}
               width={128}
               height={128}
               className="w-full h-full object-cover"
+              onError={handleImageError}
             />
           ) : (
             <div className="w-full h-full bg-linear-to-br from-primary-500 to-accent-500 flex items-center justify-center">
