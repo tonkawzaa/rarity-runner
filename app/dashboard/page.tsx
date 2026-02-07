@@ -26,21 +26,24 @@ function formatPace(avgSpeed: number): string {
   return `${paceMin}'${paceSec.toString().padStart(2, '0')}"`;
 }
 
-// Helper: Resolve user ID and Strava connection
+// Helper: Resolve user ID, database user, and Strava connection
 async function resolveUserAndStravaConnection(session: { user?: { id?: string; email?: string | null } }) {
   let userId = session.user?.id;
+  let dbUser = null;
   let stravaConnection = userId ? await getStravaConnectionByUserId(userId) : null;
 
   // If not found by ID, try by email (handle NextAuth ID inconsistencies)
-  if (!stravaConnection && session.user?.email) {
-    const user = await getUserByEmail(session.user.email);
-    if (user) {
-      userId = user.id;
-      stravaConnection = await getStravaConnectionByUserId(user.id);
+  if (session.user?.email) {
+    dbUser = await getUserByEmail(session.user.email);
+    if (dbUser) {
+      userId = dbUser.id;
+      if (!stravaConnection) {
+        stravaConnection = await getStravaConnectionByUserId(dbUser.id);
+      }
     }
   }
 
-  return { userId, stravaConnection };
+  return { userId, dbUser, stravaConnection };
 }
 
 // Helper: Fetch user stats and activities
@@ -76,7 +79,10 @@ export default async function Dashboard() {
   }
 
   // Resolve user and Strava connection
-  const { userId, stravaConnection } = await resolveUserAndStravaConnection(session);
+  const { userId, dbUser, stravaConnection } = await resolveUserAndStravaConnection(session);
+
+  // Get profile image - prefer custom uploaded image from DB over session image
+  const profileImage = dbUser?.image || session.user?.image || null;
 
   // Fetch stats and activities if connected
   const { stats, activitiesObj, formattedPace } = stravaConnection && userId
@@ -116,11 +122,11 @@ export default async function Dashboard() {
             
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                {session.user?.image && (
+                {profileImage && (
                   <Link href="/profile" className="block hover:scale-105 transition-transform cursor-pointer">
                     <Image
-                      src={session.user.image}
-                      alt={session.user.name || "User"}
+                      src={profileImage}
+                      alt={session.user?.name || "User"}
                       width={40}
                       height={40}
                       className="rounded-full border-2 border-primary-400 hover:border-primary-500 transition-colors"
