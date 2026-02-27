@@ -98,13 +98,13 @@ export function Leaderboard({ data }: Readonly<LeaderboardProps>) {
         </div>
 
         {/* Tabs */}
-        <div className="flex p-1 bg-foreground/5 rounded-xl">
+        <div className="flex w-full p-1 bg-foreground/5 rounded-xl">
           {LEADERBOARD_TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActivePeriod(tab.id)}
               className={`
-                px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
+                flex-1 flex justify-center items-center py-2 rounded-lg text-sm font-medium transition-all duration-200
                 ${activePeriod === tab.id 
                   ? 'bg-white dark:bg-gray-800 text-primary-600 shadow-sm' 
                   : 'text-foreground/60 hover:text-foreground'

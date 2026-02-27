@@ -175,37 +175,55 @@ export async function StatsAndActivitiesSection({
         </StaggerItem>
       </StaggerContainer>
 
-      {/* Recent Activities (placed here since it needs userId) */}
-      {activitiesObj.total > 0 ? (
-        <RecentActivities
-          initialActivities={activitiesObj.activities}
-          totalCount={activitiesObj.total}
-          userId={userId || ''}
-        />
-      ) : (
-        <div className="card-premium h-fit">
-          <h3 className="text-xl font-bold mb-6 text-foreground">Recent Activity</h3>
-          <div className="text-center py-12">
-            <div className="inline-block p-6 rounded-2xl bg-gradient-to-br from-primary-500/10 to-accent-500/10 mb-4">
-              <svg className="w-16 h-16 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            </div>
-            <h4 className="text-lg font-semibold mb-2 text-foreground">No runs recorded yet</h4>
-            <p className="text-foreground/60 mb-6 max-w-md mx-auto">
-              {stravaConnection
-                ? "Your Strava activities will appear here automatically!"
-                : "Connect your Strava account to start tracking your runs!"}
-            </p>
-            {!stravaConnection && (
-              <a href="/api/strava/connect" className="btn-primary inline-block">
-                Connect Strava Now
-              </a>
-            )}
-          </div>
-        </div>
-      )}
     </>
+  );
+}
+
+/**
+ * Recent Activities Section
+ * Depends on user session for data fetching
+ */
+export async function RecentActivitiesSection({
+  session
+}: {
+  session: { user?: { id?: string; email?: string | null } }
+}) {
+  const { userId, stravaConnection } = await resolveUserAndStravaConnection(session);
+
+  let activitiesObj: { activities: any[]; total: number } = { activities: [], total: 0 };
+
+  if (stravaConnection && userId) {
+    activitiesObj = (await getRunningActivities(userId, 1, 10)) || activitiesObj;
+  }
+
+  return activitiesObj.total > 0 ? (
+    <RecentActivities
+      initialActivities={activitiesObj.activities}
+      totalCount={activitiesObj.total}
+      userId={userId || ''}
+    />
+  ) : (
+    <div className="card-premium h-fit">
+      <h3 className="text-xl font-bold mb-6 text-foreground">Recent Activity</h3>
+      <div className="text-center py-12">
+        <div className="inline-block p-6 rounded-2xl bg-gradient-to-br from-primary-500/10 to-accent-500/10 mb-4">
+          <svg className="w-16 h-16 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+        </div>
+        <h4 className="text-lg font-semibold mb-2 text-foreground">No runs recorded yet</h4>
+        <p className="text-foreground/60 mb-6 max-w-md mx-auto">
+          {stravaConnection
+            ? "Your Strava activities will appear here automatically!"
+            : "Connect your Strava account to start tracking your runs!"}
+        </p>
+        {!stravaConnection && (
+          <a href="/api/strava/connect" className="btn-primary inline-block">
+            Connect Strava Now
+          </a>
+        )}
+      </div>
+    </div>
   );
 }
 

@@ -5,8 +5,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { getUserByEmail } from "@/lib/db/models/user"
 import { AnimatedSection } from "@/components/AnimatedSection"
-import { StatsAndActivitiesSection, LeaderboardSection, MembersSection } from "./DashboardSections"
-import { StatsSkeleton, LeaderboardSkeleton, MembersSkeleton } from "./DashboardSkeletons"
+import { StatsAndActivitiesSection, LeaderboardSection, RecentActivitiesSection, MembersSection } from "./DashboardSections"
+import { StatsSkeleton, LeaderboardSkeleton, RecentActivitiesSkeleton, MembersSkeleton } from "./DashboardSkeletons"
 
 export default async function Dashboard() {
   const session = await auth()
@@ -96,6 +96,11 @@ export default async function Dashboard() {
         {/* Leaderboard + Podium — streams independently */}
         <Suspense fallback={<LeaderboardSkeleton />}>
           <LeaderboardSection />
+        </Suspense>
+
+        {/* Recent Activities — streams after leaderboard */}
+        <Suspense fallback={<RecentActivitiesSkeleton />}>
+          <RecentActivitiesSection session={session} />
         </Suspense>
 
         {/* Members — streams independently */}

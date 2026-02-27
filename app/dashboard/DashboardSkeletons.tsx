@@ -89,6 +89,37 @@ export function LeaderboardSkeleton() {
   );
 }
 
+export function RecentActivitiesSkeleton() {
+  return (
+    <div className="card-premium h-fit">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-foreground/15 animate-pulse"></div>
+          <div className="h-6 w-32 bg-foreground/15 rounded-md animate-pulse"></div>
+        </div>
+      </div>
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="p-4 rounded-xl bg-foreground/5 border border-foreground/10">
+            <div className="flex justify-between items-start mb-2">
+              <div className="h-5 w-40 bg-foreground/15 rounded-md animate-pulse"></div>
+              <div className="h-4 w-20 bg-foreground/10 rounded-sm animate-pulse"></div>
+            </div>
+            <div className="grid grid-cols-3 gap-4 mt-3">
+              {[1, 2, 3].map((j) => (
+                <div key={j}>
+                  <div className="h-3 w-12 bg-foreground/10 rounded-sm mb-1 animate-pulse"></div>
+                  <div className="h-5 w-16 bg-foreground/15 rounded-sm animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function MembersSkeleton() {
   return (
     <div className="mt-8">
