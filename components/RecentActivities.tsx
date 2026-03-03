@@ -42,7 +42,7 @@ export function RecentActivities({ initialActivities, totalCount }: RecentActivi
   const [activities, setActivities] = useState<RunningActivity[]>(initialActivities)
   const [page, setPage] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
-  const limit = 10
+  const limit = 5
   
   const totalPages = Math.ceil(totalCount / limit)
 
@@ -72,7 +72,7 @@ export function RecentActivities({ initialActivities, totalCount }: RecentActivi
       
       {activities.length > 0 ? (
         <div className="space-y-4">
-          <div className="space-y-4 min-h-[500px]">
+          <div className="space-y-4 min-h-[250px]">
             {activities.map((activity) => (
               <ActivityItem key={activity.id} activity={activity} />
             ))}
