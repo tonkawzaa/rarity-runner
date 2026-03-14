@@ -2,16 +2,27 @@
 
 import { auth } from "@/auth"
 import { getRunningActivities } from "@/lib/db/models/strava"
+import { getUserByEmail } from "@/lib/db/models/user"
 
 export async function fetchRecentActivities(page: number, limit: number = 10) {
   const session = await auth()
   
-  if (!session?.user?.id) {
+  if (!session?.user) {
     throw new Error("Unauthorized")
   }
   
-  // Note: ideally we should double check the DB user ID here like in the dashboard defaults
-  // but for pagination of existing view, session ID is usually sufficient if they are connected.
-  // Using session ID for simplicity in pagination action.
-  return await getRunningActivities(session.user.id, page, limit);
+  // Resolve user ID through DB lookup (same as dashboard)
+  let userId = session.user.id;
+  if (session.user.email) {
+    const dbUser = await getUserByEmail(session.user.email);
+    if (dbUser) {
+      userId = dbUser.id;
+    }
+  }
+
+  if (!userId) {
+    throw new Error("Unauthorized")
+  }
+
+  return await getRunningActivities(userId, page, limit);
 }
