@@ -193,7 +193,7 @@ export async function RecentActivitiesSection({
   let activitiesObj: { activities: any[]; total: number } = { activities: [], total: 0 };
 
   if (stravaConnection && userId) {
-    activitiesObj = (await getRunningActivities(userId, 1, 10)) || activitiesObj;
+    activitiesObj = (await getRunningActivities(userId, 1, 5)) || activitiesObj;
   }
 
   return activitiesObj.total > 0 ? (
