@@ -11,6 +11,7 @@ interface ProfileImageUploadProps {
 
 export function ProfileImageUpload({ currentImage, userName }: ProfileImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [inputKey, setInputKey] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -72,6 +73,8 @@ export function ProfileImageUpload({ currentImage, userName }: ProfileImageUploa
       setShowModal(false);
       setPreviewUrl(null);
       setImageLoadError(false);
+      // Force re-mount the input so a new file can be selected after upload
+      setInputKey(k => k + 1);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการอัปโหลด');
@@ -84,9 +87,8 @@ export function ProfileImageUpload({ currentImage, userName }: ProfileImageUploa
     setShowModal(false);
     setPreviewUrl(null);
     setError(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    // Force re-mount the input so the same file can be re-selected
+    setInputKey(k => k + 1);
   }, []);
 
   const triggerFileSelect = useCallback(() => {
@@ -152,8 +154,9 @@ export function ProfileImageUpload({ currentImage, userName }: ProfileImageUploa
           </svg>
         </button>
 
-        {/* Hidden File Input */}
+        {/* Hidden File Input - key forces re-mount so same file can be re-selected */}
         <input
+          key={inputKey}
           ref={fileInputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp,image/gif"
@@ -174,14 +177,14 @@ export function ProfileImageUpload({ currentImage, userName }: ProfileImageUploa
             <div className="flex justify-center mb-6">
               <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-primary-400 shadow-lg">
                 {previewUrl && (
-                  <Image
-                    src={previewUrl}
-                    alt="Preview"
-                    width={160}
-                    height={160}
-                    className="w-full h-full object-cover"
-                  />
-                )}
+                // Use plain <img> for data: URL previews — Next.js Image doesn't support them
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="w-full h-full object-cover"
+                />
+              )}
               </div>
             </div>
 
