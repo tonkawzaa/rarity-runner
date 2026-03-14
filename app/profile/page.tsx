@@ -3,8 +3,7 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { 
   getStravaConnectionByUserId, 
-  getRunningStats,
-  getRunningActivities 
+  getRunningStats
 } from "@/lib/db/models/strava"
 import { getUserByEmail } from "@/lib/db/models/user"
 import { DisconnectButton } from "@/components/DisconnectButton"
@@ -56,7 +55,6 @@ export default async function ProfilePage() {
 
   // Fetch stats if connected
   const stats = stravaConnection && userId ? await getRunningStats(userId) : null;
-  const activitiesResult = stravaConnection && userId ? await getRunningActivities(userId, 1, 5) : null;
 
   const formattedStats = stats ? {
     total_distance: Number(stats.total_distance) || 0,
@@ -172,61 +170,6 @@ export default async function ProfilePage() {
             </StaggerItem>
           </StaggerContainer>
         )}
-
-        {/* Recent Activities */}
-        <AnimatedSection className="card-premium" delay={0.2}>
-          <h2 className="text-xl font-bold mb-6 text-foreground">Recent Activities</h2>
-          
-          {activitiesResult && activitiesResult.activities.length > 0 ? (
-            <div className="space-y-4">
-              {activitiesResult.activities.slice(0, 5).map((activity: any, index: number) => (
-                <div 
-                  key={activity.activity_id || index}
-                  className="flex items-center justify-between p-4 rounded-xl bg-foreground/5 hover:bg-foreground/10 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 rounded-lg bg-orange-500/10">
-                      <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-foreground">{activity.name || "Run"}</p>
-                      <p className="text-sm text-foreground/60">
-                        {new Date(activity.start_date).toLocaleDateString('th-TH', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-foreground">
-                      {(activity.distance / 1000).toFixed(2)} km
-                    </p>
-                    <p className="text-sm text-foreground/60">
-                      {Math.floor(activity.moving_time / 60)} min
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="inline-block p-6 rounded-2xl bg-gradient-to-br from-primary-500/10 to-accent-500/10 mb-4">
-                <svg className="w-12 h-12 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <p className="text-foreground/60">
-                {stravaConnection 
-                  ? "No activities yet. Start running to see your activities here!"
-                  : "Connect Strava to see your activities"}
-              </p>
-            </div>
-          )}
-        </AnimatedSection>
       </main>
     </div>
   )
