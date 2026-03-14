@@ -30,21 +30,18 @@ export function ProfileImageUpload({ currentImage, userName }: ProfileImageUploa
       return;
     }
 
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('ไฟล์ใหญ่เกินไป (สูงสุด 5MB)');
+    // Validate file size (20MB max — server will resize down to 256x256)
+    if (file.size > 20 * 1024 * 1024) {
+      setError('ไฟล์ใหญ่เกินไป (สูงสุด 20MB)');
       return;
     }
 
     setError(null);
-    
-    // Create preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreviewUrl(reader.result as string);
-      setShowModal(true);
-    };
-    reader.readAsDataURL(file);
+
+    // Use createObjectURL for instant preview — much faster than FileReader for large files
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+    setShowModal(true);
   }, []);
 
   const handleUpload = useCallback(async () => {
@@ -71,6 +68,8 @@ export function ProfileImageUpload({ currentImage, userName }: ProfileImageUploa
 
       // Success - close modal, reset image error state, and refresh
       setShowModal(false);
+      // Revoke object URL to free memory
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
       setImageLoadError(false);
       // Force re-mount the input so a new file can be selected after upload
@@ -85,11 +84,13 @@ export function ProfileImageUpload({ currentImage, userName }: ProfileImageUploa
 
   const handleCancel = useCallback(() => {
     setShowModal(false);
+    // Revoke object URL to free memory
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     setError(null);
     // Force re-mount the input so the same file can be re-selected
     setInputKey(k => k + 1);
-  }, []);
+  }, [previewUrl]);
 
   const triggerFileSelect = useCallback(() => {
     fileInputRef.current?.click();

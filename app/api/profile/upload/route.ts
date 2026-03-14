@@ -3,8 +3,8 @@ import { auth } from '@/auth';
 import sharp from 'sharp';
 import { updateUserImage, getUserByEmail } from '@/lib/db/models/user';
 
-// Maximum file size: 5MB
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+// Maximum file size: 20MB (sharp will resize to 256x256 on the server)
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
 // Allowed MIME types
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
