@@ -93,7 +93,6 @@ interface StaggerItemProps {
   children: ReactNode;
   className?: string;
 }
-
 export function StaggerItem({ children, className = "" }: Readonly<StaggerItemProps>) {
   return (
     <motion.div
