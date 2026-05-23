@@ -6,19 +6,10 @@ import {
   getRunningStats
 } from "@/lib/db/models/strava"
 import { getUserByEmail } from "@/lib/db/models/user"
+import { formatPace } from "@/lib/utils"
 import { DisconnectButton } from "@/components/DisconnectButton"
 import { AnimatedSection, StaggerContainer, StaggerItem } from "@/components/AnimatedSection"
 import { ProfileImageUpload } from "@/components/ProfileImageUpload"
-
-// Helper: Format pace from speed (m/s) to min/km string
-function formatPace(avgSpeed: number): string {
-  if (avgSpeed <= 0) return "--";
-  
-  const paceDecimal = (1000 / avgSpeed) / 60;
-  const paceMin = Math.floor(paceDecimal);
-  const paceSec = Math.round((paceDecimal - paceMin) * 60);
-  return `${paceMin}'${paceSec.toString().padStart(2, '0')}"`;
-}
 
 // Helper: Resolve user ID, database user, and Strava connection
 async function resolveUserAndStravaConnection(session: { user?: { id?: string; email?: string | null } }) {

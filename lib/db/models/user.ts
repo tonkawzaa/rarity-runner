@@ -34,52 +34,33 @@ export interface UserInput {
 }
 
 /**
- * Create or update user in database
- * Uses UPSERT (INSERT ... ON CONFLICT) to handle existing users
+ * Create or update user in database.
+ * Single atomic statement: conflicts on email (the stable unique key for Google OAuth).
+ * ID is updated on conflict to handle Google account ID rotation.
+ * Custom uploaded images are preserved on re-login.
  */
 export async function upsertUser(userData: UserInput): Promise<User> {
   const { id, email, name, image, email_verified } = userData;
 
-  // First, check if a user with this email exists but different ID
-  const existingUserQuery = 'SELECT id FROM users WHERE email = $1 AND id != $2';
-  
+  const query = `
+    INSERT INTO users (id, email, name, image, email_verified, last_login)
+    VALUES ($1, $2, $3, $4, $5, NOW())
+    ON CONFLICT (email)
+    DO UPDATE SET
+      id            = EXCLUDED.id,
+      name          = EXCLUDED.name,
+      image         = CASE
+                        WHEN users.profile_image_data IS NOT NULL THEN users.image
+                        ELSE EXCLUDED.image
+                      END,
+      email_verified = EXCLUDED.email_verified,
+      last_login    = NOW(),
+      updated_at    = NOW()
+    RETURNING ${USER_COLUMNS};
+  `;
+
   try {
-    const existingResult = await pool.query(existingUserQuery, [email, id]);
-    
-    if (existingResult.rows.length > 0) {
-      // Email exists with different ID — update that user's ID, preserve custom uploaded image
-      const updateQuery = `
-        UPDATE users
-        SET id = $1, name = $2,
-          image = CASE WHEN profile_image_data IS NOT NULL THEN image ELSE $3 END,
-          email_verified = $4, last_login = NOW(), updated_at = NOW()
-        WHERE email = $5
-        RETURNING ${USER_COLUMNS};
-      `;
-      const result = await pool.query<User>(updateQuery, [id, name || null, image || null, email_verified || false, email]);
-      return result.rows[0];
-    }
-
-    // Normal UPSERT on ID — preserve custom uploaded image on re-login
-    const query = `
-      INSERT INTO users (id, email, name, image, email_verified, last_login)
-      VALUES ($1, $2, $3, $4, $5, NOW())
-      ON CONFLICT (id)
-      DO UPDATE SET
-        email = EXCLUDED.email,
-        name = EXCLUDED.name,
-        image = CASE
-          WHEN users.profile_image_data IS NOT NULL THEN users.image
-          ELSE EXCLUDED.image
-        END,
-        email_verified = EXCLUDED.email_verified,
-        last_login = NOW(),
-        updated_at = NOW()
-      RETURNING ${USER_COLUMNS};
-    `;
-
-    const values = [id, email, name || null, image || null, email_verified || false];
-    const result = await pool.query<User>(query, values);
+    const result = await pool.query<User>(query, [id, email, name ?? null, image ?? null, email_verified ?? false]);
     return result.rows[0];
   } catch (error) {
     console.error('Error upserting user:', error);

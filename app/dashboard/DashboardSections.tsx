@@ -7,25 +7,17 @@ import {
   getStravaConnectionByUserId,
   getRunningStats,
   getLeaderboard,
-  getRunningActivities,
+  getRunningActivitiesCursor,
   type LeaderboardEntry,
 } from "@/lib/db/models/strava"
 import { getUserByEmail, getAllUsers } from "@/lib/db/models/user"
+import { formatPace } from "@/lib/utils"
 import { DisconnectButton } from "@/components/DisconnectButton"
 import { Leaderboard } from "@/components/Leaderboard"
 import { RecentActivities } from "@/components/RecentActivities"
 import { Members } from "@/components/Members"
 import { PodiumCard } from "@/components/PodiumCard"
 import { AnimatedSection, StaggerContainer, StaggerItem } from "@/components/AnimatedSection"
-
-// Helper: Format pace from speed (m/s) to min/km string
-function formatPace(avgSpeed: number): string {
-  if (avgSpeed <= 0) return "--";
-  const paceDecimal = (1000 / avgSpeed) / 60;
-  const paceMin = Math.floor(paceDecimal);
-  const paceSec = Math.round((paceDecimal - paceMin) * 60);
-  return `${paceMin}'${paceSec.toString().padStart(2, '0')}"`;
-}
 
 // Helper: Resolve user ID, database user, and Strava connection
 async function resolveUserAndStravaConnection(session: { user?: { id?: string; email?: string | null } }) {
@@ -184,17 +176,19 @@ export async function RecentActivitiesSection({
 }) {
   const { userId, stravaConnection } = await resolveUserAndStravaConnection(session);
 
-  let activitiesObj: { activities: any[]; total: number } = { activities: [], total: 0 };
+  let initialActivities: any[] = [];
+  let initialNextCursor: string | null = null;
 
   if (stravaConnection && userId) {
-    activitiesObj = (await getRunningActivities(userId, 1, 5)) || activitiesObj;
+    const result = await getRunningActivitiesCursor(userId, undefined, 5);
+    initialActivities = result.activities;
+    initialNextCursor = result.nextCursor;
   }
 
-  return activitiesObj.total > 0 ? (
+  return initialActivities.length > 0 ? (
     <RecentActivities
-      initialActivities={activitiesObj.activities}
-      totalCount={activitiesObj.total}
-      userId={userId || ''}
+      initialActivities={initialActivities}
+      initialNextCursor={initialNextCursor}
     />
   ) : (
     <div className="card-premium h-fit">
