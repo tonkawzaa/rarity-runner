@@ -110,7 +110,7 @@ export const getStravaConnectionByUserId = cache(
       }
     },
     ['strava-connection'],
-    { revalidate: 1800, tags: ['strava-connection'] }
+    { revalidate: 60, tags: ['strava-connection'] }
   )
 );
 
@@ -268,7 +268,7 @@ export const getRunningStats = unstable_cache(
     }
   },
   ['running-stats'],
-  { revalidate: 1800, tags: ['running-stats'] }
+  { revalidate: 60, tags: ['running-stats'] }
 );
 
 /**
@@ -469,5 +469,5 @@ export const getLeaderboard = unstable_cache(
     }
   },
   ['leaderboard'],
-  { revalidate: 300, tags: ['leaderboard'] }
+  { revalidate: 60, tags: ['leaderboard'] }
 );
