@@ -26,8 +26,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return true;
       } catch (error) {
         console.error("Error saving user to database:", error);
-        // Still allow login even if database save fails
-        return true;
+        return false;
       }
     },
     async session({ session, token }) {

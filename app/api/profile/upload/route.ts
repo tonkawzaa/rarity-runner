@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: 'File too large. Maximum size is 5MB.' },
+        { error: 'File too large. Maximum size is 20MB.' },
         { status: 400 }
       );
     }
@@ -69,12 +69,13 @@ export async function POST(request: NextRequest) {
       .webp({ quality: 85 })
       .toBuffer();
 
-    // Convert to Base64 data URL for database storage
+    // Store base64 separately; keep image column as a URL path with a cache-buster
     const base64 = processedImage.toString('base64');
-    const imageUrl = `data:image/webp;base64,${base64}`;
+    const profileImageData = `data:image/webp;base64,${base64}`;
+    const imageUrl = `/api/profile/image/${user.id}?v=${Date.now()}`;
 
     // Update database
-    const updatedUser = await updateUserImage(user.id, imageUrl);
+    const updatedUser = await updateUserImage(user.id, imageUrl, profileImageData);
 
     if (!updatedUser) {
       return NextResponse.json(

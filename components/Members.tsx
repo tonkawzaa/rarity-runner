@@ -24,6 +24,7 @@ const MemberItem = memo(function MemberItem({ user }: { user: User }) {
             width={40}
             height={40}
             className="rounded-full border-2 border-white dark:border-gray-800"
+            unoptimized={user.image.startsWith('data:')}
           />
         ) : (
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold">

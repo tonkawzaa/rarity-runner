@@ -54,6 +54,7 @@ const LeaderboardItem = memo(function LeaderboardItem({
               width={32}
               height={32}
               className="rounded-full border-2 border-white dark:border-gray-800"
+              unoptimized={entry.image.startsWith('data:')}
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-xs">

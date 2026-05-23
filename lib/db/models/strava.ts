@@ -3,14 +3,9 @@
  * Types and database functions for Strava OAuth connections
  */
 
+import { unstable_cache, revalidateTag } from 'next/cache';
+import { cache } from 'react';
 import { pool } from '../db';
-import { 
-  stravaConnectionCache, 
-  leaderboardCache, 
-  userStatsCache,
-  getCacheKey,
-  invalidateUserCache 
-} from '../cache';
 
 export interface StravaConnection {
   id: number;
@@ -100,46 +95,35 @@ export async function upsertStravaConnection(
 
 /**
  * Get Strava connection by user ID
- * Uses LRU cache with 30-minute TTL for cross-request caching
+ * Uses unstable_cache (30-min TTL, serverless-compatible) + React cache() for per-request dedup
  */
-export async function getStravaConnectionByUserId(
-  user_id: string
-): Promise<StravaConnection | null> {
-  // Check cache first
-  const cached = stravaConnectionCache.get(user_id);
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  const query = 'SELECT * FROM strava_connections WHERE user_id = $1';
-
-  try {
-    const result = await pool.query<StravaConnection>(query, [user_id]);
-    const connection = result.rows[0] || null;
-    
-    // Cache the result
-    stravaConnectionCache.set(user_id, connection);
-    
-    return connection;
-  } catch (error) {
-    console.error('Error getting Strava connection:', error);
-    throw error;
-  }
-}
+export const getStravaConnectionByUserId = cache(
+  unstable_cache(
+    async (user_id: string): Promise<StravaConnection | null> => {
+      const query = 'SELECT * FROM strava_connections WHERE user_id = $1';
+      try {
+        const result = await pool.query<StravaConnection>(query, [user_id]);
+        return result.rows[0] || null;
+      } catch (error) {
+        console.error('Error getting Strava connection:', error);
+        throw error;
+      }
+    },
+    ['strava-connection'],
+    { revalidate: 1800, tags: ['strava-connection'] }
+  )
+);
 
 /**
  * Delete Strava connection (disconnect)
- * Also invalidates the user cache
  */
 export async function deleteStravaConnection(user_id: string): Promise<boolean> {
   const query = 'DELETE FROM strava_connections WHERE user_id = $1';
 
   try {
     const result = await pool.query(query, [user_id]);
-    
-    // Invalidate cache on deletion
-    invalidateUserCache(user_id);
-    
+    revalidateTag('strava-connection', 'default');
+    revalidateTag('running-stats', 'default');
     return result.rowCount !== null && result.rowCount > 0;
   } catch (error) {
     console.error('Error deleting Strava connection:', error);
@@ -205,6 +189,8 @@ export async function saveRunningActivity(
 
   try {
     const result = await pool.query<RunningActivity>(query, values);
+    revalidateTag('running-stats', 'default');
+    revalidateTag('leaderboard', 'default');
     return result.rows[0];
   } catch (error) {
     console.error('Error saving running activity:', error);
@@ -259,39 +245,31 @@ export async function getRunningActivities(
 
 /**
  * Get running statistics for a user
- * Uses LRU cache with 30-minute TTL for cross-request caching
+ * Uses unstable_cache with 30-min TTL (serverless-compatible), invalidated on new activity
  */
-export async function getRunningStats(user_id: string) {
-  // Check cache first
-  const cached = userStatsCache.get(user_id);
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  const query = `
-    SELECT 
-      COUNT(*) as total_runs,
-      COALESCE(SUM(distance), 0) as total_distance,
-      COALESCE(SUM(moving_time), 0) as total_time,
-      COALESCE(AVG(average_speed), 0) as avg_speed,
-      COALESCE(SUM(total_elevation_gain), 0) as total_elevation
-    FROM running_activities 
-    WHERE user_id = $1
-  `;
-
-  try {
-    const result = await pool.query(query, [user_id]);
-    const stats = result.rows[0];
-    
-    // Cache the result
-    userStatsCache.set(user_id, stats);
-    
-    return stats;
-  } catch (error) {
-    console.error('Error getting running stats:', error);
-    throw error;
-  }
-}
+export const getRunningStats = unstable_cache(
+  async (user_id: string) => {
+    const query = `
+      SELECT
+        COUNT(*) as total_runs,
+        COALESCE(SUM(distance), 0) as total_distance,
+        COALESCE(SUM(moving_time), 0) as total_time,
+        COALESCE(AVG(average_speed), 0) as avg_speed,
+        COALESCE(SUM(total_elevation_gain), 0) as total_elevation
+      FROM running_activities
+      WHERE user_id = $1
+    `;
+    try {
+      const result = await pool.query(query, [user_id]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error getting running stats:', error);
+      throw error;
+    }
+  },
+  ['running-stats'],
+  { revalidate: 1800, tags: ['running-stats'] }
+);
 
 /**
  * Get running activities using cursor-based pagination (more efficient for large datasets)
@@ -433,78 +411,63 @@ export type LeaderboardEntry = {
 
 /**
  * Get leaderboard data
- * Uses LRU cache with 5-minute TTL (more dynamic data)
+ * Uses unstable_cache with 5-min TTL (serverless-compatible), invalidated on new activity
  */
-export async function getLeaderboard(
-  period: 'week' | 'month' | 'year' | 'last_month' = 'week',
-  limit: number = 10
-): Promise<LeaderboardEntry[]> {
-  // Check cache first
-  const cacheKey = getCacheKey('leaderboard', period, limit);
-  const cached = leaderboardCache.get(cacheKey);
-  if (cached !== undefined) {
-    return cached;
-  }
-  // Determine date filter based on period
-  let dateFilter = '';
-  let dateEndFilter = '';
-  switch (period) {
-    case 'week':
-      // Start of current week (Monday)
-      dateFilter = "DATE_TRUNC('week', NOW())";
-      break;
-    case 'month':
-      // Start of current month
-      dateFilter = "DATE_TRUNC('month', NOW())";
-      break;
-    case 'year':
-      // Start of current year
-      dateFilter = "DATE_TRUNC('year', NOW())";
-      break;
-    case 'last_month':
-      // Start of last month to end of last month
-      dateFilter = "DATE_TRUNC('month', NOW() - INTERVAL '1 month')";
-      dateEndFilter = "DATE_TRUNC('month', NOW())";
-      break;
-  }
+export const getLeaderboard = unstable_cache(
+  async (
+    period: 'week' | 'month' | 'year' | 'last_month' = 'week',
+    limit: number = 10
+  ): Promise<LeaderboardEntry[]> => {
+    let dateFilter = '';
+    let dateEndFilter = '';
+    switch (period) {
+      case 'week':
+        dateFilter = "DATE_TRUNC('week', NOW())";
+        break;
+      case 'month':
+        dateFilter = "DATE_TRUNC('month', NOW())";
+        break;
+      case 'year':
+        dateFilter = "DATE_TRUNC('year', NOW())";
+        break;
+      case 'last_month':
+        dateFilter = "DATE_TRUNC('month', NOW() - INTERVAL '1 month')";
+        dateEndFilter = "DATE_TRUNC('month', NOW())";
+        break;
+    }
 
-  const dateEndClause = dateEndFilter ? ` AND ra.start_date < ${dateEndFilter}` : '';
-  
-  const query = `
-    SELECT 
-      u.id as user_id,
-      u.name,
-      u.image,
-      COALESCE(SUM(ra.distance), 0) as total_distance,
-      COUNT(ra.id) as total_runs
-    FROM users u
-    JOIN running_activities ra ON u.id = ra.user_id
-    WHERE ra.start_date >= ${dateFilter}${dateEndClause}
-    GROUP BY u.id, u.name, u.image
-    ORDER BY total_distance DESC
-    LIMIT $1
-  `;
+    const dateEndClause = dateEndFilter ? ` AND ra.start_date < ${dateEndFilter}` : '';
 
-  try {
-    const result = await pool.query(query, [limit]);
-    
-    // Add rank/index
-    const leaderboard = result.rows.map((row, index) => ({
-      rank: index + 1,
-      user_id: row.user_id,
-      name: row.name || 'Anonymous',
-      image: row.image,
-      total_distance: Number(row.total_distance),
-      total_runs: Number(row.total_runs)
-    }));
-    
-    // Cache the result
-    const cacheKey = getCacheKey('leaderboard', period, limit);
-    leaderboardCache.set(cacheKey, leaderboard);
-    
-    return leaderboard;
-  } catch (error) {
-    console.error(`Error getting ${period} leaderboard:`, error);
-    return [];
-  }
-}
+    const query = `
+      SELECT
+        u.id as user_id,
+        u.name,
+        u.image,
+        COALESCE(SUM(ra.distance), 0) as total_distance,
+        COUNT(ra.id) as total_runs
+      FROM users u
+      JOIN running_activities ra ON u.id = ra.user_id
+      WHERE ra.start_date >= ${dateFilter}${dateEndClause}
+      GROUP BY u.id, u.name, u.image
+      ORDER BY total_distance DESC
+      LIMIT $1
+    `;
+
+    try {
+      const result = await pool.query(query, [limit]);
+      return result.rows.map((row, index) => ({
+        rank: index + 1,
+        user_id: row.user_id,
+        name: row.name || 'Anonymous',
+        image: row.image,
+        total_distance: Number(row.total_distance),
+        total_runs: Number(row.total_runs),
+      }));
+    } catch (error) {
+      console.error(`Error getting ${period} leaderboard:`, error);
+      return [];
+    }
+  },
+  ['leaderboard'],
+  { revalidate: 300, tags: ['leaderboard'] }
+);

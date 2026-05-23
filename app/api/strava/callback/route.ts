@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { upsertStravaConnection } from '@/lib/db/models/strava';
+import { upsertStravaConnection, saveRunningActivity } from '@/lib/db/models/strava';
 import { getUserById, getUserByEmail } from '@/lib/db/models/user';
+
+const RUNNING_TYPES = new Set(['Run', 'TrailRun', 'VirtualRun']);
+
+async function syncHistoricalActivities(userId: string, accessToken: string) {
+  const response = await fetch(
+    'https://www.strava.com/api/v3/athlete/activities?per_page=200&page=1',
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+
+  if (!response.ok) {
+    console.error('Strava activities fetch failed:', response.status);
+    return;
+  }
+
+  const activities: any[] = await response.json();
+  const runs = activities.filter((a) => RUNNING_TYPES.has(a.type));
+
+  await Promise.all(runs.map((activity) => saveRunningActivity(userId, activity)));
+  console.log(`Backfilled ${runs.length} running activities for user ${userId}`);
+}
 
 /**
  * Strava OAuth Callback Handler
@@ -76,7 +96,13 @@ export async function GET(request: NextRequest) {
       athlete_data: tokenData.athlete,
     });
 
-    // Redirect back to dashboard with success message
+    // Backfill existing activities (non-critical — don't fail on error)
+    try {
+      await syncHistoricalActivities(user.id, tokenData.access_token);
+    } catch (syncError) {
+      console.error('Historical backfill failed (non-critical):', syncError);
+    }
+
     return NextResponse.redirect(
       `${process.env.NEXTAUTH_URL}/dashboard?strava_connected=true`
     );

@@ -6,8 +6,8 @@
 import {
   getStravaConnectionByUserId,
   getRunningStats,
-  getRunningActivities,
   getLeaderboard,
+  getRunningActivities,
   type LeaderboardEntry,
 } from "@/lib/db/models/strava"
 import { getUserByEmail, getAllUsers } from "@/lib/db/models/user"
@@ -57,16 +57,11 @@ export async function StatsAndActivitiesSection({
 }) {
   const { userId, stravaConnection } = await resolveUserAndStravaConnection(session);
 
-  // Fetch stats and activities in parallel if connected
   let stats = { total_distance: 0, total_time: 0, avg_speed: 0, total_runs: 0 };
-  let activitiesObj: { activities: any[]; total: number } = { activities: [], total: 0 };
   let formattedPace = "--";
 
   if (stravaConnection && userId) {
-    const [fetchedStats, fetchedActivities] = await Promise.all([
-      getRunningStats(userId),
-      getRunningActivities(userId, 1, 10),
-    ]);
+    const fetchedStats = await getRunningStats(userId);
 
     stats = fetchedStats ? {
       total_distance: Number(fetchedStats.total_distance) || 0,
@@ -75,7 +70,6 @@ export async function StatsAndActivitiesSection({
       total_runs: Number(fetchedStats.total_runs) || 0,
     } : stats;
 
-    activitiesObj = fetchedActivities || activitiesObj;
     formattedPace = formatPace(stats.avg_speed);
   }
 
