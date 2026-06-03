@@ -35,8 +35,10 @@ export interface UserInput {
 
 /**
  * Create or update user in database.
- * Single atomic statement: conflicts on email (the stable unique key for Google OAuth).
- * ID is updated on conflict to handle Google account ID rotation.
+ * Conflicts are resolved on email (the stable unique key for Google OAuth).
+ * We intentionally do NOT change the existing user's id on conflict because
+ * child tables (e.g. strava_connections) hold FK references to the original id
+ * and PostgreSQL will reject a PK change while those rows exist.
  * Custom uploaded images are preserved on re-login.
  */
 export async function upsertUser(userData: UserInput): Promise<User> {
@@ -47,15 +49,14 @@ export async function upsertUser(userData: UserInput): Promise<User> {
     VALUES ($1, $2, $3, $4, $5, NOW())
     ON CONFLICT (email)
     DO UPDATE SET
-      id            = EXCLUDED.id,
-      name          = EXCLUDED.name,
-      image         = CASE
-                        WHEN users.profile_image_data IS NOT NULL THEN users.image
-                        ELSE EXCLUDED.image
-                      END,
+      name           = EXCLUDED.name,
+      image          = CASE
+                         WHEN users.profile_image_data IS NOT NULL THEN users.image
+                         ELSE EXCLUDED.image
+                       END,
       email_verified = EXCLUDED.email_verified,
-      last_login    = NOW(),
-      updated_at    = NOW()
+      last_login     = NOW(),
+      updated_at     = NOW()
     RETURNING ${USER_COLUMNS};
   `;
 
